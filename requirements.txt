@@ -1,0 +1,29 @@
+# Dependencias para Quadra - Flask + PostgreSQL
+
+# Framework Flask
+Flask==2.3.3
+Flask-SQLAlchemy==3.0.5
+Flask-Migrate==4.0.5
+Flask-Login==0.6.3
+Flask-WTF==1.1.1
+Flask-CORS==4.0.0
+
+# Base de datos PostgreSQL
+psycopg2-binary==2.9.7
+
+# Autenticación y seguridad
+Werkzeug==2.3.7
+bcrypt==4.0.1
+PyJWT==2.8.0
+
+# Validación de formularios
+WTForms==3.0.1
+
+# Variables de entorno
+python-dotenv==1.0.0
+
+# Manejo de imágenes
+Pillow==10.0.0
+
+# Utilidades
+requests==2.31.0

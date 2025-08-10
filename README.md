@@ -176,9 +176,6 @@ flask db upgrade
 # Ejecutar en modo debug
 export FLASK_DEBUG=1
 python run.py
-
-# Generar datos de prueba
-# Visita: http://localhost:5000/create-sample-data
 ```
 
 ## 🔒 Seguridad

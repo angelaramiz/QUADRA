@@ -106,24 +106,61 @@ python -c "import secrets; print(secrets.token_hex(32))"
 
 ### 5. Configurar base de datos
 
-#### Opción A: SQLite (Desarrollo)
+#### Opción A: SQLite (Desarrollo rápido)
 ```bash
 # Las tablas se crean automáticamente al ejecutar
 python run.py
 ```
 
-#### Opción B: PostgreSQL (Recomendado)
+#### Opción B: PostgreSQL (Recomendado para producción)
+
+**Paso 1: Instalar PostgreSQL**
 ```bash
-# Crear base de datos en PostgreSQL
-createdb quadra_db
+# Windows: Descargar desde https://www.postgresql.org/download/windows/
+# O usar chocolatey:
+choco install postgresql
 
-# Configurar DATABASE_URL en .env
-DATABASE_URL=postgresql://usuario:contraseña@localhost:5432/quadra_db
+# macOS:
+brew install postgresql
 
-# Inicializar migraciones
+# Ubuntu/Debian:
+sudo apt-get install postgresql postgresql-contrib
+```
+
+**Paso 2: Crear base de datos y usuario**
+```bash
+# Conectar a PostgreSQL como superusuario
+psql -U postgres
+
+# Crear base de datos y usuario
+CREATE DATABASE quadra_db;
+CREATE USER quadra_user WITH PASSWORD 'tu_contraseña_segura';
+GRANT ALL PRIVILEGES ON DATABASE quadra_db TO quadra_user;
+\q
+```
+
+**Paso 3: Configurar DATABASE_URL en .env**
+```bash
+# Editar archivo .env y cambiar:
+DATABASE_URL=postgresql://quadra_user:tu_contraseña_segura@localhost:5432/quadra_db
+```
+
+**Paso 4: Ejecutar migraciones**
+```bash
+# Inicializar migraciones (solo la primera vez)
 flask db init
+
+# Crear migración inicial
 flask db migrate -m "Initial migration"
+
+# Aplicar migraciones
 flask db upgrade
+```
+
+**Paso 5: Verificar configuración**
+```bash
+# Ejecutar script de verificación
+python setup_postgres.py
 ```
 
 ### 6. Ejecutar la aplicación

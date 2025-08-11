@@ -2,9 +2,14 @@ from flask import Blueprint, render_template, request, redirect, url_for, flash,
 from flask_login import login_required, current_user
 from werkzeug.utils import secure_filename
 from werkzeug.exceptions import RequestEntityTooLarge
-from app.models.food_stand import FoodStand
-from app.models.review import Review
-from app import db
+try:
+    from ..models.food_stand import FoodStand
+    from ..models.review import Review
+    from .. import db
+except ImportError:
+    from app.models.food_stand import FoodStand
+    from app.models.review import Review
+    from app import db
 import os
 from PIL import Image
 

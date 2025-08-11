@@ -6,7 +6,7 @@ Flask-SQLAlchemy==3.0.5
 Flask-Migrate==4.0.5
 Flask-Login==0.6.3
 Flask-WTF==1.1.1
-Flask-CORS==4.0.0
+Flask-CORS==3.0.10
 
 # Base de datos PostgreSQL
 psycopg2-binary==2.9.7

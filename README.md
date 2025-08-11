@@ -175,13 +175,18 @@ cd ..
 ### 6. Ejecutar la aplicación
 
 ```bash
-# Opción 1: Desde la raíz del proyecto
+# Método recomendado: Desde la raíz del proyecto
 python -m app.run
 
-# Opción 2: Entrando a la carpeta app
+# Método alternativo: Usando el script de inicio
+python start.py
+
+# Para desarrollo dentro de la carpeta app (requiere configuración adicional)
 cd app
 python run.py
 ```
+
+**⚠️ Nota importante:** Se recomienda ejecutar la aplicación desde el directorio raíz del proyecto para evitar problemas de importación de módulos.
 
 La aplicación estará disponible en `http://localhost:5000`
 

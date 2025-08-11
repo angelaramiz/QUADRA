@@ -45,10 +45,17 @@ def create_app():
     login_manager.login_message = 'Por favor, inicia sesión para acceder a esta página.'
     login_manager.login_message_category = 'info'
     
-    # Registrar Blueprints
-    from app.routes.main import main_bp
-    from app.routes.auth import auth_bp
-    from app.routes.food_stands import food_stands_bp
+    # Registrar Blueprints con imports relativos
+    try:
+        # Cuando se ejecuta desde la carpeta app/
+        from routes.main import main_bp
+        from routes.auth import auth_bp
+        from routes.food_stands import food_stands_bp
+    except ImportError:
+        # Cuando se ejecuta como módulo desde la raíz
+        from app.routes.main import main_bp
+        from app.routes.auth import auth_bp
+        from app.routes.food_stands import food_stands_bp
     
     app.register_blueprint(main_bp)
     app.register_blueprint(auth_bp, url_prefix='/auth')
@@ -57,7 +64,10 @@ def create_app():
     # User loader para Flask-Login
     @login_manager.user_loader
     def load_user(user_id):
-        from app.models.user import User
+        try:
+            from .models.user import User
+        except ImportError:
+            from app.models.user import User
         return User.query.get(int(user_id))
     
     return app

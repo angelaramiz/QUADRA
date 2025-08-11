@@ -96,10 +96,11 @@ pip install -r requirements.txt
 ### 4. Configurar variables de entorno
 
 ```bash
-# Copiar archivo de ejemplo
-cp .env.example .env
+# Las variables de entorno están en app/.env
+# Copiar archivo de ejemplo desde app/
+cp app/.env.example app/.env
 
-# Editar .env con tus configuraciones
+# Editar app/.env con tus configuraciones
 # Generar SECRET_KEY segura:
 python -c "import secrets; print(secrets.token_hex(32))"
 ```
@@ -139,14 +140,17 @@ GRANT ALL PRIVILEGES ON DATABASE quadra_db TO quadra_user;
 \q
 ```
 
-**Paso 3: Configurar DATABASE_URL en .env**
+**Paso 3: Configurar DATABASE_URL en app/.env**
 ```bash
-# Editar archivo .env y cambiar:
+# Editar archivo app/.env y cambiar:
 DATABASE_URL=postgresql://quadra_user:tu_contraseña_segura@localhost:5432/quadra_db
 ```
 
 **Paso 4: Ejecutar migraciones**
 ```bash
+# Cambiar al directorio de la aplicación
+cd app
+
 # Inicializar migraciones (solo la primera vez)
 flask db init
 
@@ -155,17 +159,27 @@ flask db migrate -m "Initial migration"
 
 # Aplicar migraciones
 flask db upgrade
+
+# Volver al directorio raíz
+cd ..
 ```
 
 **Paso 5: Verificar configuración**
 ```bash
-# Ejecutar script de verificación
+# Ejecutar script de verificación desde app/
+cd app
 python setup_postgres.py
+cd ..
 ```
 
 ### 6. Ejecutar la aplicación
 
 ```bash
+# Opción 1: Desde la raíz del proyecto
+python -m app.run
+
+# Opción 2: Entrando a la carpeta app
+cd app
 python run.py
 ```
 
@@ -186,33 +200,58 @@ La aplicación estará disponible en `http://localhost:5000`
 #### Estructura del Proyecto
 
 ```
-quadra/
-├── app/
-│   ├── models/          # Modelos de base de datos
-│   ├── routes/          # Rutas y lógica de negocio
-│   ├── templates/       # Plantillas HTML
-│   ├── static/          # CSS, JS, imágenes
-│   └── __init__.py      # Configuración de la app
-├── migrations/          # Migraciones de base de datos
-├── instance/           # Archivos de instancia (SQLite)
-├── venv/               # Entorno virtual
-├── requirements.txt    # Dependencias Python
-├── run.py             # Punto de entrada
-└── README.md          # Este archivo
+QUADRA/
+├── app/                    # 📁 Aplicación principal
+│   ├── models/            #   🗃️ Modelos de base de datos
+│   ├── routes/            #   🚏 Rutas y lógica de negocio
+│   ├── templates/         #   📄 Plantillas HTML
+│   ├── static/            #   🎨 CSS, JS, imágenes
+│   ├── migrations/        #   🔄 Migraciones de base de datos
+│   ├── instance/          #   💾 Archivos de instancia (SQLite)
+│   ├── .env               #   ⚙️ Variables de entorno
+│   ├── .env.example       #   📋 Ejemplo de configuración
+│   ├── run.py             #   🚀 Ejecutor interno de la app
+│   ├── setup_postgres.py  #   🐘 Configurador PostgreSQL
+│   └── __init__.py        #   📦 Configuración de la app
+├── checkpoints/           # 📚 Documentación académica
+├── img/                   # 🖼️ Imágenes del proyecto
+├── venv/                  # 🐍 Entorno virtual Python
+├── .gitignore             # 🚫 Archivos ignorados por Git
+├── LICENSE                # 📜 Licencia MIT
+├── README.md              # 📖 Este archivo
+├── requirements.txt       # 📋 Dependencias Python
+├── run.py                 # 🎬 Punto de entrada principal
+└── setup_postgres.py      # 🔧 Script de configuración PostgreSQL
 ```
 
 #### Comandos Útiles
 
 ```bash
-# Crear nueva migración
-flask db migrate -m "Descripción del cambio"
+# Ejecutar la aplicación
+python -m app.run
+# O: cd app && python run.py
 
-# Aplicar migraciones
+# Configurar PostgreSQL
+cd app && python setup_postgres.py
+
+# Crear nueva migración
+cd app
+flask db migrate -m "Descripción del cambio"
 flask db upgrade
+cd ..
 
 # Ejecutar en modo debug
 export FLASK_DEBUG=1
-python run.py
+python -m app.run
+
+# Instalar dependencias
+pip install -r requirements.txt
+
+# Activar entorno virtual
+# Windows:
+venv\Scripts\activate
+# macOS/Linux:
+source venv/bin/activate
 ```
 
 ## 🔒 Seguridad

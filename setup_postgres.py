@@ -42,17 +42,30 @@ def main():
     # Verificar conexión
     try:
         from app import create_app, db
+        from sqlalchemy import inspect, text
         
         app = create_app()
         with app.app_context():
             # Intentar conectar
-            db.engine.execute('SELECT 1')
+            result = db.session.execute(text('SELECT 1')).fetchone()
             print("✅ Conexión a PostgreSQL exitosa")
+            print(f"🔧 Motor de BD: {db.engine.name}")
             
             # Verificar si hay tablas
-            tables = db.engine.table_names()
+            inspector = inspect(db.engine)
+            tables = inspector.get_table_names()
             if tables:
-                print(f"📋 Tablas existentes: {', '.join(tables)}")
+                print(f"📋 Tablas existentes ({len(tables)}): {', '.join(tables)}")
+                
+                # Verificar datos
+                from app.models.user import User
+                from app.models.food_stand import FoodStand
+                from app.models.review import Review
+                
+                print(f"📊 Datos actuales:")
+                print(f"   👤 Usuarios: {User.query.count()}")
+                print(f"   🏪 Puestos: {FoodStand.query.count()}")
+                print(f"   ⭐ Reseñas: {Review.query.count()}")
             else:
                 print("⚠️  No hay tablas. Ejecuta las migraciones:")
                 print("   flask db init")

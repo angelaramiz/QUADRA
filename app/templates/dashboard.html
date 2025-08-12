@@ -2,14 +2,105 @@
 
 {% block title %}Dashboard - Quadra{% endblock %}
 
+{% block extra_css %}
+<!-- CSS simplificado - Mini mapa removido -->
+<style>
+    .dashboard-card {
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    
+    .dashboard-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    }
+    
+    .stat-icon {
+        width: 60px;
+        height: 60px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+        font-size: 24px;
+    }
+</style>
+{% endblock %}
+
 {% block content %}
-<div class="container py-4">
-    <!-- Welcome Section -->
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h1 class="h3 mb-0">Dashboard</h1>
+                    <p class="text-muted">Bienvenido, {{ current_user.username }}</p>
+                </div>
+                <a href="{{ url_for('food_stands.create_stand') }}" class="btn btn-primary">
+                    <i class="bi bi-plus-circle"></i> Nuevo Puesto
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Stats Cards -->
     <div class="row mb-4">
-        <div class="col">
-            <div class="bg-primary text-white rounded p-4">
-                <h2 class="mb-0">¡Hola, {{ current_user.username }}!</h2>
-                <p class="mb-0">Descubre nuevos sabores y comparte tus favoritos</p>
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="card dashboard-card border-0 shadow-sm h-100">
+                <div class="card-body text-center">
+                    <div class="text-primary mb-2">
+                        <i class="bi bi-shop display-4"></i>
+                    </div>
+                    <h4 class="fw-bold">{{ my_stands|length if my_stands else 0 }}</h4>
+                    <p class="text-muted mb-0">Mis Puestos</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="card dashboard-card border-0 shadow-sm h-100">
+                <div class="card-body text-center">
+                    <div class="text-success mb-2">
+                        <i class="bi bi-star-fill display-4"></i>
+                    </div>
+                    <h4 class="fw-bold">
+                        {% set total_reviews = my_stands|sum(attribute='total_reviews') if my_stands else 0 %}
+                        {{ total_reviews }}
+                    </h4>
+                    <p class="text-muted mb-0">Reseñas Recibidas</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="card dashboard-card border-0 shadow-sm h-100">
+                <div class="card-body text-center">
+                    <div class="text-warning mb-2">
+                        <i class="bi bi-eye-fill display-4"></i>
+                    </div>
+                    <h4 class="fw-bold">{{ recent_stands|length if recent_stands else 0 }}</h4>
+                    <p class="text-muted mb-0">Puestos Recientes</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="card dashboard-card border-0 shadow-sm h-100">
+                <div class="card-body text-center">
+                    <div class="text-info mb-2">
+                        <i class="bi bi-graph-up display-4"></i>
+                    </div>
+                    <h4 class="fw-bold">
+                        {% if my_stands %}
+                            {% set total_rating = my_stands|selectattr('average_rating')|map(attribute='average_rating')|sum %}
+                            {% set count_rated = my_stands|selectattr('average_rating')|list|length %}
+                            {% if count_rated > 0 %}
+                                {{ "%.1f"|format(total_rating / count_rated) }}⭐
+                            {% else %}
+                                N/A
+                            {% endif %}
+                        {% else %}
+                            N/A
+                        {% endif %}
+                    </h4>
+                    <p class="text-muted mb-0">Mi Promedio</p>
+                </div>
             </div>
         </div>
     </div>
@@ -17,211 +108,142 @@
     <!-- Quick Actions -->
     <div class="row mb-4">
         <div class="col-md-4 mb-3">
-            <a href="{{ url_for('food_stands.create_stand') }}" class="card text-decoration-none h-100">
+            <div class="card dashboard-card border-0 shadow-sm h-100">
                 <div class="card-body text-center">
-                    <i class="bi bi-plus-circle-fill text-success" style="font-size: 3rem;"></i>
-                    <h5 class="card-title mt-2">Agregar Puesto</h5>
-                    <p class="card-text text-muted">Comparte un nuevo puesto de comida</p>
+                    <i class="bi bi-plus-circle text-primary display-4 mb-3"></i>
+                    <h5 class="card-title">Agregar Puesto</h5>
+                    <p class="card-text text-muted">Comparte un nuevo puesto de comida con la comunidad</p>
+                    <a href="{{ url_for('food_stands.create_stand') }}" class="btn btn-primary">
+                        <i class="bi bi-plus"></i> Crear Puesto
+                    </a>
                 </div>
-            </a>
+            </div>
         </div>
-        
         <div class="col-md-4 mb-3">
-            <a href="{{ url_for('food_stands.list_stands') }}" class="card text-decoration-none h-100">
+            <div class="card dashboard-card border-0 shadow-sm h-100">
                 <div class="card-body text-center">
-                    <i class="bi bi-search text-primary" style="font-size: 3rem;"></i>
-                    <h5 class="card-title mt-2">Explorar</h5>
-                    <p class="card-text text-muted">Busca puestos cerca de ti</p>
+                    <i class="bi bi-list-ul text-success display-4 mb-3"></i>
+                    <h5 class="card-title">Mis Puestos</h5>
+                    <p class="card-text text-muted">Gestiona y edita tus puestos registrados</p>
+                    <a href="{{ url_for('food_stands.my_stands') }}" class="btn btn-success">
+                        <i class="bi bi-eye"></i> Ver Mis Puestos
+                    </a>
                 </div>
-            </a>
+            </div>
         </div>
-        
         <div class="col-md-4 mb-3">
-            <a href="{{ url_for('food_stands.my_stands') }}" class="card text-decoration-none h-100">
+            <div class="card dashboard-card border-0 shadow-sm h-100">
                 <div class="card-body text-center">
-                    <i class="bi bi-person-badge text-warning" style="font-size: 3rem;"></i>
-                    <h5 class="card-title mt-2">Mis Puestos</h5>
-                    <p class="card-text text-muted">Gestiona tus publicaciones</p>
+                    <i class="bi bi-search text-info display-4 mb-3"></i>
+                    <h5 class="card-title">Explorar</h5>
+                    <p class="card-text text-muted">Descubre nuevos puestos de comida en el mapa</p>
+                    <a href="{{ url_for('main.index') }}" class="btn btn-info">
+                        <i class="bi bi-map"></i> Ir al Mapa
+                    </a>
                 </div>
-            </a>
+            </div>
         </div>
     </div>
 
-    <!-- Recent Food Stands -->
+    <!-- Mapa Compacto - REMOVIDO para evitar problemas de tiles -->
+    <!-- <div class="row mb-4">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-transparent">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-geo-alt-fill text-primary"></i> 
+                        Vista Rápida del Mapa
+                    </h5>
+                    <small class="text-muted">Haz clic para expandir y explorar</small>
+                </div>
+                <div class="card-body p-0">
+                    <div class="mini-map-container" id="miniMapContainer">
+                        <div id="miniMap" class="mini-map">
+                            <div style="width: 100%; height: 100%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center; color: white; font-size: 16px;">
+                                <div class="text-center">
+                                    <i class="fas fa-map-marked-alt fa-3x mb-3"></i>
+                                    <p class="mb-0"><strong>Mini Mapa</strong></p>
+                                    <small>Inicializando...</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="map-overlay">
+                            <div class="expand-icon">
+                                <i class="bi bi-arrows-fullscreen"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div> -->
+
+    <!-- Recent Activity -->
     {% if recent_stands %}
-    <div class="row mb-4">
-        <div class="col">
-            <h3 class="mb-3">
-                <i class="bi bi-clock"></i> Puestos Recientes
-            </h3>
-            <div class="row">
-                {% for stand in recent_stands %}
-                <div class="col-md-4 mb-3">
-                    <div class="card food-stand-card h-100">
-                        {% if stand.image_filename %}
-                        <img src="{{ url_for('static', filename='uploads/' + stand.image_filename) }}" 
-                             class="card-img-top food-stand-image" 
-                             alt="{{ stand.name }}">
-                        {% else %}
-                        <div class="food-stand-image d-flex align-items-center justify-content-center bg-light">
-                            <i class="bi bi-image text-muted" style="font-size: 3rem;"></i>
-                        </div>
-                        {% endif %}
-                        
-                        <div class="card-body">
-                            <h5 class="card-title">{{ stand.name }}</h5>
-                            <p class="card-text text-truncate-2">{{ stand.description }}</p>
-                            
-                            <div class="d-flex justify-content-between align-items-center">
-                                <div class="rating-stars">
-                                    {% for i in range(5) %}
-                                        <i class="bi {% if i < stand.average_rating %}bi-star-fill{% else %}bi-star{% endif %}"></i>
-                                    {% endfor %}
-                                    <small class="text-muted">({{ stand.total_reviews }})</small>
-                                </div>
-                                <small class="text-muted">
-                                    <i class="bi bi-person"></i> {{ stand.owner.username }}
-                                </small>
-                            </div>
-                        </div>
-                        
-                        <div class="card-footer bg-transparent">
-                            <a href="{{ url_for('food_stands.view_stand', id=stand.id) }}" class="btn btn-outline-primary btn-sm w-100">
-                                Ver Detalles
-                            </a>
-                        </div>
-                    </div>
-                </div>
-                {% endfor %}
-            </div>
-            
-            <div class="text-center">
-                <a href="{{ url_for('food_stands.list_stands') }}" class="btn btn-primary">
-                    Ver Todos los Puestos
-                </a>
-            </div>
-        </div>
-    </div>
-    {% endif %}
-
-    <!-- Top Rated Stands -->
-    {% if top_rated_stands %}
-    <div class="row mb-4">
-        <div class="col">
-            <h3 class="mb-3">
-                <i class="bi bi-star"></i> Mejor Calificados
-            </h3>
-            <div class="row">
-                {% for stand in top_rated_stands %}
-                <div class="col-md-4 mb-3">
-                    <div class="card food-stand-card h-100">
-                        {% if stand.image_filename %}
-                        <img src="{{ url_for('static', filename='uploads/' + stand.image_filename) }}" 
-                             class="card-img-top food-stand-image" 
-                             alt="{{ stand.name }}">
-                        {% else %}
-                        <div class="food-stand-image d-flex align-items-center justify-content-center bg-light">
-                            <i class="bi bi-image text-muted" style="font-size: 3rem;"></i>
-                        </div>
-                        {% endif %}
-                        
-                        <div class="card-body">
-                            <h5 class="card-title">{{ stand.name }}</h5>
-                            <p class="card-text text-truncate-2">{{ stand.description }}</p>
-                            
-                            <div class="d-flex justify-content-between align-items-center">
-                                <div class="rating-stars">
-                                    {% for i in range(5) %}
-                                        <i class="bi {% if i < stand.average_rating %}bi-star-fill{% else %}bi-star{% endif %}"></i>
-                                    {% endfor %}
-                                    <small class="text-muted">({{ stand.total_reviews }})</small>
-                                </div>
-                                <small class="text-muted">
-                                    <i class="bi bi-person"></i> {{ stand.owner.username }}
-                                </small>
-                            </div>
-                        </div>
-                        
-                        <div class="card-footer bg-transparent">
-                            <a href="{{ url_for('food_stands.view_stand', id=stand.id) }}" class="btn btn-outline-primary btn-sm w-100">
-                                Ver Detalles
-                            </a>
-                        </div>
-                    </div>
-                </div>
-                {% endfor %}
-            </div>
-        </div>
-    </div>
-    {% endif %}
-
-    <!-- My Stands Preview -->
-    {% if my_stands %}
     <div class="row">
-        <div class="col">
-            <h3 class="mb-3">
-                <i class="bi bi-person-badge"></i> Mis Puestos
-            </h3>
-            <div class="row">
-                {% for stand in my_stands %}
-                <div class="col-md-4 mb-3">
-                    <div class="card food-stand-card h-100">
-                        {% if stand.image_filename %}
-                        <img src="{{ url_for('static', filename='uploads/' + stand.image_filename) }}" 
-                             class="card-img-top food-stand-image" 
-                             alt="{{ stand.name }}">
-                        {% else %}
-                        <div class="food-stand-image d-flex align-items-center justify-content-center bg-light">
-                            <i class="bi bi-image text-muted" style="font-size: 3rem;"></i>
-                        </div>
-                        {% endif %}
-                        
-                        <div class="card-body">
-                            <h5 class="card-title">{{ stand.name }}</h5>
-                            <p class="card-text text-truncate-2">{{ stand.description }}</p>
-                            
-                            <div class="d-flex justify-content-between align-items-center">
-                                <div class="rating-stars">
-                                    {% for i in range(5) %}
-                                        <i class="bi {% if i < stand.average_rating %}bi-star-fill{% else %}bi-star{% endif %}"></i>
-                                    {% endfor %}
-                                    <small class="text-muted">({{ stand.total_reviews }})</small>
+        <div class="col-12">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-transparent">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-clock text-primary"></i> 
+                        Puestos Recientes
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        {% for stand in recent_stands[:6] %}
+                        <div class="col-lg-4 col-md-6 mb-3">
+                            <div class="card dashboard-card border-0 shadow-sm h-100">
+                                {% if stand.image_filename %}
+                                <img src="{{ url_for('static', filename='uploads/' + stand.image_filename) }}" 
+                                     class="card-img-top" style="height: 200px; object-fit: cover;">
+                                {% else %}
+                                <div class="card-img-top bg-light d-flex align-items-center justify-content-center" 
+                                     style="height: 200px;">
+                                    <i class="bi bi-image text-muted" style="font-size: 3rem;"></i>
                                 </div>
-                                <span class="badge bg-success">Tuyo</span>
+                                {% endif %}
+                                <div class="card-body">
+                                    <h6 class="card-title">{{ stand.name }}</h6>
+                                    <p class="card-text text-muted small">{{ stand.description[:80] }}...</p>
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <small class="text-muted">
+                                            {% if stand.average_rating %}
+                                                {% for i in range(1, 6) %}
+                                                    {% if i <= stand.average_rating %}
+                                                        <i class="bi bi-star-fill text-warning"></i>
+                                                    {% else %}
+                                                        <i class="bi bi-star text-muted"></i>
+                                                    {% endif %}
+                                                {% endfor %}
+                                            {% else %}
+                                                Sin calificar
+                                            {% endif %}
+                                        </small>
+                                        <a href="{{ url_for('food_stands.stand_detail', id=stand.id) }}" 
+                                           class="btn btn-sm btn-outline-primary">Ver</a>
+                                    </div>
+                                </div>
                             </div>
                         </div>
-                        
-                        <div class="card-footer bg-transparent">
-                            <a href="{{ url_for('food_stands.view_stand', id=stand.id) }}" class="btn btn-outline-primary btn-sm w-100">
-                                Ver Detalles
-                            </a>
-                        </div>
+                        {% endfor %}
                     </div>
                 </div>
-                {% endfor %}
             </div>
-            
-            <div class="text-center">
-                <a href="{{ url_for('food_stands.my_stands') }}" class="btn btn-primary">
-                    Ver Todos Mis Puestos
-                </a>
-            </div>
-        </div>
-    </div>
-    {% endif %}
-
-    <!-- Empty State -->
-    {% if not recent_stands and not top_rated_stands %}
-    <div class="row">
-        <div class="col text-center py-5">
-            <i class="bi bi-search text-muted" style="font-size: 5rem;"></i>
-            <h3 class="mt-3">¡Aún no hay puestos!</h3>
-            <p class="text-muted">Sé el primero en agregar un puesto de comida a la comunidad.</p>
-            <a href="{{ url_for('food_stands.create_stand') }}" class="btn btn-primary btn-lg">
-                <i class="bi bi-plus-circle"></i> Agregar Primer Puesto
-            </a>
         </div>
     </div>
     {% endif %}
 </div>
+
+<!-- Modal del mapa removido - ya no es necesario -->
+<!-- Los usuarios pueden acceder al mapa mediante el botón "Explorar" que va a index.html -->
+{% endblock %}
+
+{% block scripts %}
+<!-- JavaScript simplificado - Mini mapa removido -->
+<script>
+console.log('🎯 DASHBOARD SIMPLIFICADO - CARGADO');
+// Mini mapa removido para evitar problemas de tiles
+// El mapa está disponible mediante el botón "Explorar"
+</script>
 {% endblock %}

@@ -64,6 +64,38 @@
         z-index: 1000;
     }
     
+    /* Animación para marcador de ubicación */
+    @keyframes pulse {
+        0% {
+            transform: scale(1);
+            opacity: 1;
+        }
+        50% {
+            transform: scale(1.2);
+            opacity: 0.7;
+        }
+        100% {
+            transform: scale(1);
+            opacity: 1;
+        }
+    }
+    
+    /* Estilos para notificaciones de ubicación */
+    .location-notification {
+        animation: slideInRight 0.3s ease-out;
+    }
+    
+    @keyframes slideInRight {
+        from {
+            transform: translateX(100%);
+            opacity: 0;
+        }
+        to {
+            transform: translateX(0);
+            opacity: 1;
+        }
+    }
+    
     @media (max-width: 768px) {
         .cta-overlay {
             position: static;
@@ -230,6 +262,14 @@
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
 <script>
+// Configurar íconos de Leaflet para evitar errores 404
+delete L.Icon.Default.prototype._getIconUrl;
+L.Icon.Default.mergeOptions({
+    iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png',
+    iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png',
+    shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
+});
+
 // Datos de los puestos de comida
 const foodStands = {{ food_stands|tojson }};
 
@@ -244,6 +284,92 @@ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
 // Crear grupo de marcadores
 const markersGroup = L.layerGroup().addTo(map);
 let allMarkers = [];
+let userLocationMarker = null;
+
+// Función para geolocalización automática al cargar
+function attemptAutoLocation() {
+    if (navigator.geolocation) {
+        // Configuración de geolocalización optimizada
+        const options = {
+            enableHighAccuracy: true,
+            timeout: 8000,
+            maximumAge: 300000 // 5 minutos
+        };
+        
+        navigator.geolocation.getCurrentPosition(
+            (position) => {
+                const lat = position.coords.latitude;
+                const lng = position.coords.longitude;
+                
+                // Centrar mapa en la ubicación del usuario
+                map.setView([lat, lng], 14);
+                
+                // Agregar marcador de ubicación actual
+                if (userLocationMarker) {
+                    map.removeLayer(userLocationMarker);
+                }
+                
+                userLocationMarker = L.marker([lat, lng], {
+                    icon: L.divIcon({
+                        className: 'current-location-marker',
+                        html: '<div style="background: #dc3545; width: 20px; height: 20px; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 6px rgba(0,0,0,0.3);"></div>',
+                        iconSize: [26, 26],
+                        iconAnchor: [13, 13]
+                    })
+                }).addTo(map);
+                
+                userLocationMarker.bindPopup('<strong>📍 Tu ubicación actual</strong><br><small>Detectada automáticamente</small>');
+                
+                // Mostrar notificación de éxito
+                showLocationNotification('🎯 Ubicación detectada automáticamente', 'success');
+            },
+            (error) => {
+                // Manejar errores de forma no intrusiva
+                console.log('Geolocalización automática no disponible:', error.message);
+                
+                // Mostrar notificación sutil
+                if (error.code === error.PERMISSION_DENIED) {
+                    showLocationNotification('💡 Puedes usar el botón "Ubicarme" para centrar el mapa', 'info');
+                }
+            },
+            options
+        );
+    }
+}
+
+// Función para mostrar notificaciones de ubicación
+function showLocationNotification(message, type = 'info') {
+    const notification = document.createElement('div');
+    notification.className = `alert alert-${type} alert-dismissible fade show position-fixed location-notification`;
+    notification.style.cssText = 'top: 20px; right: 20px; z-index: 1050; max-width: 320px; font-size: 0.9rem; box-shadow: 0 4px 12px rgba(0,0,0,0.15);';
+    notification.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close btn-close-sm" data-bs-dismiss="alert" aria-label="Close"></button>
+    `;
+    
+    document.body.appendChild(notification);
+    
+    // Auto-dismiss después de 5 segundos
+    setTimeout(() => {
+        if (notification.parentNode) {
+            notification.classList.remove('show');
+            setTimeout(() => notification.remove(), 150);
+        }
+    }, 5000);
+}
+
+// Ejecutar geolocalización automática después de un pequeño delay
+setTimeout(() => {
+    attemptAutoLocation();
+    
+    // Mostrar mensaje de bienvenida si es la primera visita
+    if (!localStorage.getItem('quadra_visited')) {
+        setTimeout(() => {
+            showLocationNotification('👋 ¡Bienvenido a Quadra! Permitir ubicación mejora tu experiencia', 'info');
+            localStorage.setItem('quadra_visited', 'true');
+        }, 2000);
+    }
+}, 1000);
 
 // Función para crear popup de puesto
 function createStandPopup(stand) {
@@ -345,40 +471,80 @@ document.getElementById('searchInput').addEventListener('input', filterMarkers);
 document.getElementById('minRating').addEventListener('change', filterMarkers);
 document.getElementById('sortBy').addEventListener('change', filterMarkers);
 
-// Geolocalización
+// Geolocalización manual (botón)
 document.getElementById('findMyLocation').addEventListener('click', function() {
     if (navigator.geolocation) {
+        // Cambiar estado del botón
+        const originalText = this.innerHTML;
         this.innerHTML = '<i class="bi bi-arrow-clockwise spinner-border spinner-border-sm"></i> Ubicando...';
         this.disabled = true;
+        
+        const options = {
+            enableHighAccuracy: true,
+            timeout: 8000,
+            maximumAge: 60000 // 1 minuto
+        };
         
         navigator.geolocation.getCurrentPosition(
             (position) => {
                 const lat = position.coords.latitude;
                 const lng = position.coords.longitude;
                 
-                map.setView([lat, lng], 14);
+                // Centrar mapa en la ubicación
+                map.setView([lat, lng], 15); // Zoom más cercano para búsqueda manual
                 
-                // Agregar marcador de ubicación actual
-                L.marker([lat, lng], {
+                // Remover marcador anterior si existe
+                if (userLocationMarker) {
+                    map.removeLayer(userLocationMarker);
+                }
+                
+                // Agregar nuevo marcador de ubicación actual
+                userLocationMarker = L.marker([lat, lng], {
                     icon: L.divIcon({
                         className: 'current-location-marker',
-                        html: '<i class="bi bi-geo-alt-fill text-danger" style="font-size: 1.5rem;"></i>',
-                        iconSize: [30, 30],
-                        iconAnchor: [15, 15]
+                        html: '<div style="background: #dc3545; width: 20px; height: 20px; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 6px rgba(0,0,0,0.3); animation: pulse 2s infinite;"></div>',
+                        iconSize: [26, 26],
+                        iconAnchor: [13, 13]
                     })
-                }).addTo(map).bindPopup('Tu ubicación actual');
+                }).addTo(map);
                 
-                this.innerHTML = '<i class="bi bi-geo-alt"></i> Ubicarme';
+                userLocationMarker.bindPopup('<strong>📍 Tu ubicación actual</strong><br><small>Obtenida manualmente</small>');
+                
+                // Mostrar popup automáticamente para confirmación
+                userLocationMarker.openPopup();
+                
+                // Mostrar notificación de éxito
+                showLocationNotification('🎯 ¡Ubicación actualizada correctamente!', 'success');
+                
+                // Restaurar botón
+                this.innerHTML = originalText;
                 this.disabled = false;
             },
             (error) => {
-                alert('No se pudo obtener tu ubicación');
-                this.innerHTML = '<i class="bi bi-geo-alt"></i> Ubicarme';
+                let message = 'No se pudo obtener tu ubicación';
+                
+                switch(error.code) {
+                    case error.PERMISSION_DENIED:
+                        message = 'Permiso de ubicación denegado. Por favor, permite el acceso a tu ubicación.';
+                        break;
+                    case error.POSITION_UNAVAILABLE:
+                        message = 'Información de ubicación no disponible.';
+                        break;
+                    case error.TIMEOUT:
+                        message = 'Tiempo de espera agotado. Inténtalo de nuevo.';
+                        break;
+                }
+                
+                showLocationNotification(message, 'warning');
+                
+                // Restaurar botón
+                this.innerHTML = originalText;
                 this.disabled = false;
-            }
+            },
+            options
         );
     } else {
-        alert('Tu navegador no soporta geolocalización');
+        showLocationNotification('Tu navegador no soporta geolocalización', 'error');
     }
 });
 

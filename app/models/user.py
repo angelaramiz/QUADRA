@@ -1,7 +1,8 @@
 from app import db
 from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
-from datetime import datetime
+from datetime import datetime, timedelta
+import secrets
 
 class User(UserMixin, db.Model):
     __tablename__ = 'users'
@@ -12,6 +13,10 @@ class User(UserMixin, db.Model):
     password_hash = db.Column(db.String(128), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     is_active = db.Column(db.Boolean, default=True)
+    
+    # Campos para recuperación de contraseña
+    reset_token = db.Column(db.String(128), nullable=True)
+    reset_token_expires = db.Column(db.DateTime, nullable=True)
     
     # Relaciones
     food_stands = db.relationship('FoodStand', backref='owner', lazy=True, cascade='all, delete-orphan')
@@ -24,6 +29,23 @@ class User(UserMixin, db.Model):
     def check_password(self, password):
         """Verifica si la contraseña es correcta"""
         return check_password_hash(self.password_hash, password)
+    
+    def generate_reset_token(self):
+        """Genera un token para recuperación de contraseña"""
+        self.reset_token = secrets.token_urlsafe(32)
+        self.reset_token_expires = datetime.utcnow() + timedelta(hours=1)  # Expira en 1 hora
+        return self.reset_token
+    
+    def verify_reset_token(self, token):
+        """Verifica si el token de recuperación es válido y no ha expirado"""
+        return (self.reset_token == token and 
+                self.reset_token_expires and 
+                self.reset_token_expires > datetime.utcnow())
+    
+    def clear_reset_token(self):
+        """Limpia el token de recuperación después de usarlo"""
+        self.reset_token = None
+        self.reset_token_expires = None
     
     def __repr__(self):
         return f'<User {self.username}>'

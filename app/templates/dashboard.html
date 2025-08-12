@@ -145,6 +145,61 @@
         </div>
     </div>
 
+    <!-- Configuración de Cuenta -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-transparent">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-person-gear text-warning"></i> 
+                        Configuración de Cuenta
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <div class="card dashboard-card border-0 shadow-sm h-100 bg-light">
+                                <div class="card-body text-center">
+                                    <i class="bi bi-shield-lock text-warning display-4 mb-3"></i>
+                                    <h6 class="card-title">Cambiar Contraseña</h6>
+                                    <p class="card-text text-muted small">Actualiza tu contraseña de forma segura</p>
+                                    <a href="{{ url_for('auth.change_password') }}" class="btn btn-warning">
+                                        <i class="bi bi-gear"></i> Cambiar
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <div class="card dashboard-card border-0 shadow-sm h-100 bg-light">
+                                <div class="card-body text-center">
+                                    <i class="bi bi-person-circle text-info display-4 mb-3"></i>
+                                    <h6 class="card-title">Mi Perfil</h6>
+                                    <p class="card-text text-muted small">
+                                        <strong>Usuario:</strong> {{ current_user.username }}<br>
+                                        <strong>Email:</strong> {{ current_user.email }}
+                                    </p>
+                                    <span class="badge bg-success">Activo</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <div class="card dashboard-card border-0 shadow-sm h-100 bg-light">
+                                <div class="card-body text-center">
+                                    <i class="bi bi-box-arrow-right text-danger display-4 mb-3"></i>
+                                    <h6 class="card-title">Cerrar Sesión</h6>
+                                    <p class="card-text text-muted small">Sal de forma segura de tu cuenta</p>
+                                    <a href="{{ url_for('auth.logout') }}" class="btn btn-outline-danger">
+                                        <i class="bi bi-power"></i> Salir
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Mapa Compacto - REMOVIDO para evitar problemas de tiles -->
     <!-- <div class="row mb-4">
         <div class="col-12">

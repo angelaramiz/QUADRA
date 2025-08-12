@@ -61,6 +61,11 @@
                     </form>
                     
                     <div class="text-center">
+                        <div class="mb-2">
+                            <a href="{{ url_for('auth.forgot_password') }}" class="text-decoration-none">
+                                <i class="bi bi-key"></i> ¿Olvidaste tu contraseña?
+                            </a>
+                        </div>
                         <p class="mb-0">
                             ¿No tienes cuenta? 
                             <a href="{{ url_for('auth.register') }}" class="text-decoration-none">

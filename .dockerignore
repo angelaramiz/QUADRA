@@ -1,0 +1,67 @@
+# Archivos y directorios a ignorar en Docker build
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Entornos virtuales
+venv/
+env/
+ENV/
+
+# Archivos de configuración local
+.env
+app/.env
+instance/
+*.db
+*.sqlite
+*.sqlite3
+
+# Archivos de desarrollo
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Archivos de sistema
+.DS_Store
+Thumbs.db
+
+# Git
+.git/
+.gitignore
+
+# Documentación y checkpoints
+checkpoints/
+*.md
+README.md
+
+# Scripts de desarrollo
+setup_fly_secrets.*
+fly_secrets_manual.txt
+init_supabase.py
+migrate_data_to_supabase.py
+update_database_for_password_reset.py
+verify_supabase.py
+
+# Archivos temporales
+*.tmp
+*.log

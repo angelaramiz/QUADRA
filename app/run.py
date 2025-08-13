@@ -5,6 +5,8 @@ Punto de entrada para ejecutar la aplicación QUADRA
 Ejecutar desde la carpeta app/ o desde la raíz con: python -m app.run
 """
 
+import os
+
 try:
     # Cuando se ejecuta desde la carpeta app/
     from __init__ import create_app, db

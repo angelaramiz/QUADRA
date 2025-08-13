@@ -33,6 +33,36 @@
         background: rgba(255,255,255,0.9);
         border: none;
     }
+    
+    /* Estilos para vista expandible */
+    .list-group-item {
+        transition: all 0.2s ease;
+        border-radius: 8px !important;
+    }
+    
+    .list-group-item:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        background-color: #f8f9fa;
+    }
+    
+    .btn-group .btn {
+        border-radius: 6px;
+    }
+    
+    .btn-group .btn.active {
+        background-color: #0d6efd;
+        border-color: #0d6efd;
+        color: white;
+    }
+    
+    #toggleRecentView {
+        transition: all 0.3s ease;
+    }
+    
+    #toggleRecentView:hover {
+        transform: scale(1.05);
+    }
         align-items: center;
         justify-content: center;
         border-radius: 50%;
@@ -331,28 +361,44 @@
         <div class="col-12">
             <div class="card border-0 shadow-sm">
                 <div class="card-header bg-transparent">
-                    <h5 class="card-title mb-0">
-                        <i class="bi bi-clock text-primary"></i> 
-                        Puestos Recientes
-                    </h5>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="card-title mb-0">
+                            <i class="bi bi-clock text-primary"></i> 
+                            Puestos Recientes
+                        </h5>
+                        <div class="d-flex gap-2">
+                            <button class="btn btn-sm btn-outline-primary" id="toggleRecentView" data-expanded="false">
+                                <i class="bi bi-arrows-expand"></i> Ver todos
+                            </button>
+                            <div class="btn-group btn-group-sm d-none" id="viewModeButtons" role="group">
+                                <button type="button" class="btn btn-outline-secondary active" id="cardViewBtn">
+                                    <i class="bi bi-grid-3x3-gap"></i> Tarjetas
+                                </button>
+                                <button type="button" class="btn btn-outline-secondary" id="listViewBtn">
+                                    <i class="bi bi-list-ul"></i> Lista
+                                </button>
+                            </div>
+                        </div>
+                    </div>
                 </div>
                 <div class="card-body">
-                    <div class="row">
-                        {% for stand in recent_stands[:6] %}
+                    <!-- Vista compacta inicial (solo 3 puestos) -->
+                    <div class="row" id="compactRecentView">
+                        {% for stand in recent_stands[:3] %}
                         <div class="col-lg-4 col-md-6 mb-3">
                             <div class="card dashboard-card border-0 shadow-sm h-100">
                                 {% if stand.image_filename %}
                                 <img src="{{ url_for('static', filename='uploads/' + stand.image_filename) }}" 
-                                     class="card-img-top" style="height: 200px; object-fit: cover;">
+                                     class="card-img-top" style="height: 180px; object-fit: cover;">
                                 {% else %}
                                 <div class="card-img-top bg-light d-flex align-items-center justify-content-center" 
-                                     style="height: 200px;">
-                                    <i class="bi bi-image text-muted" style="font-size: 3rem;"></i>
+                                     style="height: 180px;">
+                                    <i class="bi bi-image text-muted" style="font-size: 2.5rem;"></i>
                                 </div>
                                 {% endif %}
                                 <div class="card-body">
                                     <h6 class="card-title">{{ stand.name }}</h6>
-                                    <p class="card-text text-muted small">{{ stand.description[:80] }}...</p>
+                                    <p class="card-text text-muted small">{{ stand.description[:60] }}...</p>
                                     <div class="d-flex justify-content-between align-items-center">
                                         <small class="text-muted">
                                             {% if stand.average_rating %}
@@ -375,6 +421,126 @@
                         </div>
                         {% endfor %}
                     </div>
+
+                    <!-- Vista expandida (todos los puestos) -->
+                    <div class="d-none" id="expandedRecentView">
+                        <!-- Vista de tarjetas -->
+                        <div class="row" id="cardView">
+                            {% for stand in recent_stands %}
+                            <div class="col-lg-3 col-md-4 col-sm-6 mb-4">
+                                <div class="card dashboard-card border-0 shadow-sm h-100">
+                                    {% if stand.image_filename %}
+                                    <img src="{{ url_for('static', filename='uploads/' + stand.image_filename) }}" 
+                                         class="card-img-top" style="height: 200px; object-fit: cover;">
+                                    {% else %}
+                                    <div class="card-img-top bg-light d-flex align-items-center justify-content-center" 
+                                         style="height: 200px;">
+                                        <i class="bi bi-image text-muted" style="font-size: 3rem;"></i>
+                                    </div>
+                                    {% endif %}
+                                    <div class="card-body">
+                                        <h6 class="card-title">{{ stand.name }}</h6>
+                                        <p class="card-text text-muted small">{{ stand.description[:80] }}...</p>
+                                        <div class="d-flex justify-content-between align-items-center mb-2">
+                                            <small class="text-muted">
+                                                {% if stand.average_rating %}
+                                                    {% for i in range(1, 6) %}
+                                                        {% if i <= stand.average_rating %}
+                                                            <i class="bi bi-star-fill text-warning"></i>
+                                                        {% else %}
+                                                            <i class="bi bi-star text-muted"></i>
+                                                        {% endif %}
+                                                    {% endfor %}
+                                                    <span class="ms-1">({{ stand.average_rating|round(1) }})</span>
+                                                {% else %}
+                                                    Sin calificar
+                                                {% endif %}
+                                            </small>
+                                        </div>
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <small class="text-muted">
+                                                <i class="bi bi-clock"></i> {{ stand.created_at.strftime('%d/%m/%Y') }}
+                                            </small>
+                                            <a href="{{ url_for('food_stands.view_stand', id=stand.id) }}" 
+                                               class="btn btn-sm btn-outline-primary">Ver</a>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+
+                        <!-- Vista de lista -->
+                        <div class="d-none" id="listView">
+                            <div class="list-group">
+                                {% for stand in recent_stands %}
+                                <div class="list-group-item list-group-item-action border-0 mb-2 shadow-sm">
+                                    <div class="row align-items-center">
+                                        <div class="col-md-2">
+                                            {% if stand.image_filename %}
+                                            <img src="{{ url_for('static', filename='uploads/' + stand.image_filename) }}" 
+                                                 class="img-fluid rounded" style="height: 80px; width: 100%; object-fit: cover;">
+                                            {% else %}
+                                            <div class="bg-light rounded d-flex align-items-center justify-content-center" 
+                                                 style="height: 80px;">
+                                                <i class="bi bi-image text-muted" style="font-size: 2rem;"></i>
+                                            </div>
+                                            {% endif %}
+                                        </div>
+                                        <div class="col-md-7">
+                                            <h6 class="mb-1">{{ stand.name }}</h6>
+                                            <p class="mb-1 text-muted">{{ stand.description[:120] }}...</p>
+                                            <small class="text-muted">
+                                                {% if stand.address %}
+                                                    <i class="bi bi-geo-alt"></i> {{ stand.address }}
+                                                {% endif %}
+                                                {% if stand.municipality %}
+                                                    - {{ stand.municipality }}
+                                                {% endif %}
+                                            </small>
+                                        </div>
+                                        <div class="col-md-2 text-center">
+                                            <div class="mb-2">
+                                                {% if stand.average_rating %}
+                                                    {% for i in range(1, 6) %}
+                                                        {% if i <= stand.average_rating %}
+                                                            <i class="bi bi-star-fill text-warning"></i>
+                                                        {% else %}
+                                                            <i class="bi bi-star text-muted"></i>
+                                                        {% endif %}
+                                                    {% endfor %}
+                                                    <div class="small text-muted">{{ stand.average_rating|round(1) }}</div>
+                                                {% else %}
+                                                    <div class="small text-muted">Sin calificar</div>
+                                                {% endif %}
+                                            </div>
+                                            <small class="text-muted d-block">
+                                                <i class="bi bi-clock"></i> {{ stand.created_at.strftime('%d/%m/%Y') }}
+                                            </small>
+                                        </div>
+                                        <div class="col-md-1">
+                                            <a href="{{ url_for('food_stands.view_stand', id=stand.id) }}" 
+                                               class="btn btn-sm btn-outline-primary">
+                                                <i class="bi bi-eye"></i>
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+
+                    {% if recent_stands|length == 0 %}
+                    <div class="text-center py-4">
+                        <i class="bi bi-inbox text-muted" style="font-size: 3rem;"></i>
+                        <h6 class="text-muted mt-2">No hay puestos recientes</h6>
+                        <p class="text-muted">¡Sé el primero en agregar un puesto!</p>
+                        <a href="{{ url_for('food_stands.create_stand') }}" class="btn btn-primary">
+                            <i class="bi bi-plus-circle"></i> Crear Puesto
+                        </a>
+                    </div>
+                    {% endif %}
                 </div>
             </div>
         </div>
@@ -460,5 +626,60 @@ if (currentFilters.lat && currentFilters.lng && currentFilters.radius) {
 {% if filtered_stands %}
     console.log(`📍 Resultados filtrados: {{ filtered_stands|length }} puestos encontrados`);
 {% endif %}
+
+// ========================================
+// CONTROL DE VISTA EXPANDIBLE PARA PUESTOS RECIENTES
+// ========================================
+
+document.addEventListener('DOMContentLoaded', function() {
+    const toggleBtn = document.getElementById('toggleRecentView');
+    const compactView = document.getElementById('compactRecentView');
+    const expandedView = document.getElementById('expandedRecentView');
+    const viewModeButtons = document.getElementById('viewModeButtons');
+    const cardViewBtn = document.getElementById('cardViewBtn');
+    const listViewBtn = document.getElementById('listViewBtn');
+    const cardView = document.getElementById('cardView');
+    const listView = document.getElementById('listView');
+
+    // Control del botón de expandir/contraer
+    if (toggleBtn) {
+        toggleBtn.addEventListener('click', function() {
+            const isExpanded = this.getAttribute('data-expanded') === 'true';
+            
+            if (isExpanded) {
+                // Contraer vista
+                compactView.classList.remove('d-none');
+                expandedView.classList.add('d-none');
+                viewModeButtons.classList.add('d-none');
+                this.innerHTML = '<i class="bi bi-arrows-expand"></i> Ver todos';
+                this.setAttribute('data-expanded', 'false');
+            } else {
+                // Expandir vista
+                compactView.classList.add('d-none');
+                expandedView.classList.remove('d-none');
+                viewModeButtons.classList.remove('d-none');
+                this.innerHTML = '<i class="bi bi-arrows-collapse"></i> Ver menos';
+                this.setAttribute('data-expanded', 'true');
+            }
+        });
+    }
+
+    // Control de vista de tarjetas vs lista
+    if (cardViewBtn && listViewBtn) {
+        cardViewBtn.addEventListener('click', function() {
+            cardView.classList.remove('d-none');
+            listView.classList.add('d-none');
+            cardViewBtn.classList.add('active');
+            listViewBtn.classList.remove('active');
+        });
+
+        listViewBtn.addEventListener('click', function() {
+            cardView.classList.add('d-none');
+            listView.classList.remove('d-none');
+            listViewBtn.classList.add('active');
+            cardViewBtn.classList.remove('active');
+        });
+    }
+});
 </script>
 {% endblock %}

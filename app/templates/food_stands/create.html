@@ -131,8 +131,15 @@
                             <!-- Mostrar coordenadas seleccionadas -->
                             <div class="mt-2">
                                 <small class="text-muted">
+                                    <i class="bi bi-geo-alt"></i>
                                     <span id="coords-display">Selecciona una ubicación en el mapa</span>
                                 </small>
+                                <div class="mt-1">
+                                    <small class="text-info">
+                                        <i class="bi bi-info-circle"></i>
+                                        Al seleccionar una ubicación, se completará automáticamente la dirección
+                                    </small>
+                                </div>
                             </div>
                         </div>
 
@@ -169,12 +176,131 @@ document.addEventListener('DOMContentLoaded', function() {
 
     let marker = null;
 
-    // Función para actualizar la ubicación
+    // Función para actualizar la ubicación con geocodificación inversa
     function updateLocation(lat, lng) {
         document.getElementById('latitude').value = lat;
         document.getElementById('longitude').value = lng;
         document.getElementById('coords-display').textContent = 
             `Latitud: ${lat.toFixed(6)}, Longitud: ${lng.toFixed(6)}`;
+        
+        // Mostrar indicador de carga
+        const addressField = document.getElementById('address');
+        const municipalityField = document.getElementById('municipality');
+        const stateField = document.getElementById('state');
+        const neighborhoodField = document.getElementById('neighborhood');
+        
+        addressField.value = 'Obteniendo dirección...';
+        addressField.disabled = true;
+        
+        // Realizar geocodificación inversa usando Nominatim (OpenStreetMap)
+        fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&addressdetails=1&accept-language=es`)
+            .then(response => response.json())
+            .then(data => {
+                console.log('Datos de geocodificación:', data);
+                
+                // Restablecer campo de dirección
+                addressField.disabled = false;
+                
+                if (data && data.display_name) {
+                    // Construir dirección formateada
+                    const address = data.address || {};
+                    let formattedAddress = '';
+                    
+                    // Número y calle
+                    if (address.house_number && address.road) {
+                        formattedAddress = `${address.road} ${address.house_number}`;
+                    } else if (address.road) {
+                        formattedAddress = address.road;
+                    }
+                    
+                    // Agregar colonia/barrio si existe
+                    if (address.neighbourhood || address.suburb) {
+                        const neighborhood = address.neighbourhood || address.suburb;
+                        if (formattedAddress) {
+                            formattedAddress += `, ${neighborhood}`;
+                        } else {
+                            formattedAddress = neighborhood;
+                        }
+                        neighborhoodField.value = neighborhood;
+                    }
+                    
+                    // Rellenar campos automáticamente
+                    if (formattedAddress) {
+                        addressField.value = formattedAddress;
+                        addressField.classList.add('auto-filled');
+                        setTimeout(() => addressField.classList.remove('auto-filled'), 3000);
+                    } else {
+                        addressField.value = data.display_name.split(',')[0] || '';
+                    }
+                    
+                    // Municipio/Ciudad
+                    const municipality = address.city || address.town || address.municipality || 
+                                       address.city_district || address.borough;
+                    if (municipality) {
+                        municipalityField.value = municipality;
+                        municipalityField.classList.add('auto-filled');
+                        setTimeout(() => municipalityField.classList.remove('auto-filled'), 3000);
+                    }
+                    
+                    // Estado
+                    const state = address.state || address.province;
+                    if (state) {
+                        stateField.value = state;
+                        stateField.classList.add('auto-filled');
+                        setTimeout(() => stateField.classList.remove('auto-filled'), 3000);
+                    } else {
+                        // Por defecto para México
+                        stateField.value = 'Ciudad de México';
+                    }
+                    
+                    // Agregar efecto visual a colonia si se completó
+                    if (address.neighbourhood || address.suburb) {
+                        neighborhoodField.classList.add('auto-filled');
+                        setTimeout(() => neighborhoodField.classList.remove('auto-filled'), 3000);
+                    }
+                    
+                    // Mostrar mensaje de éxito
+                    showAddressMessage('✅ Dirección obtenida automáticamente', 'success');
+                    
+                } else {
+                    addressField.value = '';
+                    showAddressMessage('⚠️ No se pudo obtener la dirección exacta', 'warning');
+                }
+            })
+            .catch(error => {
+                console.error('Error en geocodificación:', error);
+                addressField.disabled = false;
+                addressField.value = '';
+                showAddressMessage('❌ Error al obtener la dirección', 'error');
+            });
+    }
+    
+    // Función para mostrar mensajes de estado de la dirección
+    function showAddressMessage(message, type) {
+        // Buscar mensaje anterior y removerlo
+        const existingMessage = document.querySelector('.address-message');
+        if (existingMessage) {
+            existingMessage.remove();
+        }
+        
+        // Crear nuevo mensaje
+        const messageDiv = document.createElement('div');
+        messageDiv.className = `address-message alert alert-${type === 'success' ? 'success' : type === 'warning' ? 'warning' : 'danger'} alert-dismissible fade show mt-2`;
+        messageDiv.innerHTML = `
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
+        
+        // Insertar después del campo de dirección
+        const addressField = document.getElementById('address');
+        addressField.parentNode.appendChild(messageDiv);
+        
+        // Auto-remover después de 5 segundos
+        setTimeout(() => {
+            if (messageDiv && messageDiv.parentNode) {
+                messageDiv.remove();
+            }
+        }, 5000);
     }
 
     // Evento de clic en el mapa
@@ -242,6 +368,56 @@ document.addEventListener('DOMContentLoaded', function() {
 
 .leaflet-popup-content-wrapper {
     border-radius: 8px;
+}
+
+/* Estilos para mensajes de dirección */
+.address-message {
+    font-size: 0.875rem;
+    border-radius: 6px;
+    animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Efecto de carga en campo de dirección */
+input[disabled] {
+    background-color: #f8f9fa !important;
+    opacity: 0.8;
+    position: relative;
+}
+
+/* Indicador visual de campo auto-completado */
+.auto-filled {
+    border-color: #198754 !important;
+    box-shadow: 0 0 0 0.25rem rgba(25, 135, 84, 0.25) !important;
+}
+
+/* Mejorar visibilidad del mapa */
+#map {
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    transition: box-shadow 0.3s ease;
+}
+
+#map:hover {
+    box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+}
+
+/* Estilo para coordenadas */
+#coords-display {
+    font-family: 'Courier New', monospace;
+    background: #f8f9fa;
+    padding: 2px 6px;
+    border-radius: 4px;
+    border: 1px solid #dee2e6;
 }
 </style>
 {% endblock %}

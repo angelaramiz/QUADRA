@@ -1,0 +1,48 @@
+name: 🚀 Deploy to Fly.io
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  deploy:
+    name: Deploy app
+    runs-on: ubuntu-latest
+    
+    # Solo despliega en push a main, no en PRs
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🐍 Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.12'
+
+      - name: 📦 Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: 🧪 Run tests (opcional)
+        run: |
+          # Agregar aquí tus tests si los tienes
+          echo "✅ Tests passed (placeholder)"
+
+      - name: ✈️ Setup flyctl
+        uses: superfly/flyctl-actions/setup-flyctl@master
+
+      - name: 🚀 Deploy to Fly.io
+        run: flyctl deploy --remote-only
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+
+      - name: 📱 Notify deployment
+        if: success()
+        run: |
+          echo "🎉 Deployment successful!"
+          echo "🌐 App URL: https://quadra-app.fly.dev"

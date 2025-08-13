@@ -27,3 +27,4 @@ Pillow==10.0.0
 
 # Utilidades
 requests==2.31.0
+gunicorn==21.2.0

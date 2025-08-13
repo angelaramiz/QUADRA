@@ -173,6 +173,7 @@
                     </div>
                     <div class="card-body">
                         <form method="POST" action="{{ url_for('food_stands.add_review', id=stand.id) }}">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                             <div class="mb-3">
                                 <label class="form-label">Calificación</label>
                                 <div class="rating-input">

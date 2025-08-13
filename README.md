@@ -19,7 +19,177 @@
 
 ## 📋 Descripción
 
-**Quadra** es una aplicación web desarrollada con Flask que permite a los usuarios descubrir, agregar y calificar puestos de comida callejera. Los usuarios pueden compartir ubicaciones georeferenciadas, subir fotos, escribir reseñas y encontrar los mejores sabores de su ciudad.
+<div align="center">
+  <img src="app/static/images/logo.svg" alt="QUADRA Logo" width="300">
+</div>
+
+# 🍕 QUADRA - Plataforma de Puestos de Comida
+
+[![Deployed on Fly.io](https://img.shields.io/badge/Deployed-Fly.io-blueviolet)](https://quadra-app.fly.dev)
+[![Live Demo](https://img.shields.io/badge/Live-Demo-brightgreen)](https://quadra-app.fly.dev)
+[![Flask](https://img.shields.io/badge/Flask-2.3.3-blue)](https://flask.palletsprojects.com/)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-Supabase-336791)](https://supabase.com/)
+
+**QUADRA** es una aplicación web desarrollada con Flask que permite a los usuarios descubrir, registrar y calificar puestos de comida mediante un sistema de mapas interactivo con geolocalización automática.
+
+🌐 **[VER DEMO EN VIVO](https://quadra-app.fly.dev)** 🌐
+
+## 🚀 **Características principales:**
+
+- 🗺️ **Mapa interactivo** con geolocalización automática
+- 📍 **Registro de puestos** de comida con ubicación GPS
+- ⭐ **Sistema de reseñas** y calificaciones
+- 🔐 **Autenticación completa** con recuperación de contraseña
+- 📱 **Diseño responsive** optimizado para móviles
+- ☁️ **Base de datos Supabase** PostgreSQL en la nube
+- 🚀 **Desplegado en Fly.io** con HTTPS
+
+## 🏗️ **Estructura del proyecto:**
+
+```
+QUADRA/
+├── 📁 app/                    # Aplicación Flask principal
+│   ├── 📁 models/            # Modelos de base de datos
+│   ├── 📁 routes/            # Rutas y controladores
+│   ├── 📁 static/            # Archivos estáticos (CSS, JS, imágenes)
+│   ├── 📁 templates/         # Plantillas HTML
+│   └── 📁 migrations/        # Migraciones de base de datos
+├── 📁 scripts/               # Scripts de utilidad y configuración
+├── 📁 deployment/            # Archivos para despliegue en Fly.io
+├── 📁 docs/                  # Documentación técnica
+├── 📁 checkpoints/           # Documentación de desarrollo
+├── 🐳 Dockerfile            # Configuración de Docker
+├── ✈️ fly.toml              # Configuración de Fly.io
+├── 📋 requirements.txt      # Dependencias de Python
+├── 🚀 start.py              # Punto de entrada principal
+└── 🌐 wsgi.py               # Entrada para servidor WSGI
+```
+
+## 🛠️ **Tecnologías utilizadas:**
+
+### Backend:
+- **Flask** - Framework web de Python
+- **SQLAlchemy** - ORM para base de datos
+- **Flask-Login** - Gestión de sesiones
+- **Flask-WTF** - Formularios y validación
+- **Supabase PostgreSQL** - Base de datos en la nube
+
+### Frontend:
+- **Bootstrap 5** - Framework CSS
+- **Leaflet.js** - Mapas interactivos
+- **JavaScript ES6+** - Funcionalidades del cliente
+- **Geolocation API** - Detección automática de ubicación
+
+### Despliegue:
+- **Fly.io** - Plataforma de hosting
+- **Docker** - Contenedorización
+- **Gunicorn** - Servidor WSGI para producción
+
+## 🚀 **Instalación y configuración:**
+
+### 1. **Clonar el repositorio:**
+```bash
+git clone https://github.com/angelaramiz/QUADRA.git
+cd QUADRA
+```
+
+### 2. **Crear entorno virtual:**
+```bash
+python -m venv venv
+source venv/bin/activate  # En Windows: venv\Scripts\activate
+```
+
+### 3. **Instalar dependencias:**
+```bash
+pip install -r requirements.txt
+```
+
+### 4. **Configurar variables de entorno:**
+```bash
+# Crear archivo .env en la carpeta app/
+cp app/.env.example app/.env
+# Editar con tus credenciales de Supabase
+```
+
+### 5. **Inicializar base de datos:**
+```bash
+python scripts/init_supabase.py
+```
+
+### 6. **Ejecutar la aplicación:**
+```bash
+python start.py
+```
+
+La aplicación estará disponible en `http://localhost:5000`
+
+## ☁️ **Despliegue en Fly.io:**
+
+### Configuración automática:
+```bash
+# PowerShell
+.\deployment\setup_fly_complete.ps1
+
+# Bash
+./deployment/setup_fly_complete.sh
+```
+
+### Configuración manual:
+Consulta los archivos en la carpeta `deployment/` para instrucciones detalladas.
+
+## 📚 **Documentación:**
+
+- **[Scripts](scripts/README.md)** - Documentación de scripts de utilidad
+- **[Deployment](deployment/README.md)** - Guías de despliegue
+- **[Docs](docs/README.md)** - Documentación técnica de features
+
+## 🔐 **Funcionalidades de seguridad:**
+
+- ✅ Autenticación con hash de contraseñas
+- ✅ Recuperación de contraseña por email
+- ✅ Protección CSRF
+- ✅ Rate limiting en login
+- ✅ Cookies seguras en producción
+- ✅ Validación de formularios
+
+## 🗺️ **Funcionalidades del mapa:**
+
+- ✅ Geolocalización automática
+- ✅ Marcadores personalizados
+- ✅ Información emergente (popups)
+- ✅ Búsqueda por ubicación
+- ✅ Diseño responsive
+- ✅ Manejo de errores de ubicación
+
+## 🎯 **Estado del proyecto:**
+
+**🟢 Producción** - La aplicación está desplegada y funcionando en:
+- **URL:** [https://quadra-app.fly.dev](https://quadra-app.fly.dev)
+- **Estado:** Activo ✅
+- **Base de datos:** Supabase PostgreSQL ✅
+- **Última actualización:** Agosto 2025
+
+## 👥 **Contribuciones:**
+
+1. Fork el proyecto
+2. Crea una rama feature (`git checkout -b feature/AmazingFeature`)
+3. Commit tus cambios (`git commit -m 'Add some AmazingFeature'`)
+4. Push a la rama (`git push origin feature/AmazingFeature`)
+5. Abre un Pull Request
+
+## 📄 **Licencia:**
+
+Este proyecto está licenciado bajo la Licencia MIT - ver el archivo [LICENSE](LICENSE) para más detalles.
+
+## 📞 **Contacto:**
+
+- **Desarrollador:** Angel Aramiz
+- **Email:** angelaramiz22@gmail.com
+- **Proyecto:** [https://github.com/angelaramiz/QUADRA](https://github.com/angelaramiz/QUADRA)
+
+---
+
+⭐ **¡Dale una estrella al proyecto si te ha sido útil!** es una aplicación web desarrollada con Flask que permite a los usuarios descubrir, agregar y calificar puestos de comida callejera. Los usuarios pueden compartir ubicaciones georeferenciadas, subir fotos, escribir reseñas y encontrar los mejores sabores de su ciudad.
 
 ### 🎯 Características Principales
 

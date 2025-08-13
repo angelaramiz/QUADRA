@@ -10,16 +10,18 @@
 iwr https://fly.io/install.ps1 -useb | iex
 ```
 
-#### 2. **Obtener token de Fly.io:**
+#### 2. **Obtener token de Fly.io con permisos de deploy:**
 ```bash
-flyctl auth token
+flyctl tokens create deploy
 ```
+
+**⚠️ IMPORTANTE:** Usa `flyctl tokens create deploy` en lugar de `flyctl auth token` para tener permisos suficientes.
 
 #### 3. **Configurar secret en GitHub:**
 1. Ve a: https://github.com/angelaramiz/QUADRA/settings/secrets/actions
-2. Click "New repository secret"
+2. Click "New repository secret" (o "Update" si ya existe)
 3. Name: `FLY_API_TOKEN`
-4. Value: [Pegar el token del paso 2]
+4. Value: [Pegar el token del paso 2 - DEBE EMPEZAR CON "FlyV1"]
 5. Click "Add secret"
 
 #### 4. **¡Listo! 🎉**
@@ -50,18 +52,19 @@ flyctl auth token
 
 ## 🔄 **Estado actual:**
 
-✅ **flyctl instalado y funcionando**
-- Versión: v0.3.170
-- Token generado exitosamente
+✅ **Problema de producción RESUELTO**
+- Error 500 en /dashboard corregido manualmente
+- App funcionando: https://quadra-app.fly.dev
 
-🔧 **Pasos restantes:**
-1. Configura el secret FLY_API_TOKEN en GitHub
-2. Haz commit y push de los archivos nuevos
-3. ¡Auto-deploy estará activo!
+🔧 **Auto-deploy pendiente:**
+1. ❌ Token actual no tiene permisos suficientes  
+2. ✅ Nuevo token con permisos creado: `FlyV1 fm2_...`
+3. 🔧 Necesitas actualizar FLY_API_TOKEN en GitHub Secrets
+4. ✅ Archivo GitHub Actions ya configurado
 
-✅ **Una vez configurado:**
-- Push a `main` → Deploy automático
-- App actualizada en: https://quadra-app.fly.dev
+✅ **Una vez actualizado el token:**
+- Push a `main` → Deploy automático funcionará
+- App se actualizará automáticamente en: https://quadra-app.fly.dev
 
 ---
 

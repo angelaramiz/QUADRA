@@ -102,12 +102,20 @@ def create_stand():
         
         # Crear nuevo puesto
         try:
+            # Obtener campos adicionales de ubicación
+            municipality = request.form.get('municipality', '').strip()
+            state = request.form.get('state', '').strip()
+            neighborhood = request.form.get('neighborhood', '').strip()
+            
             stand = FoodStand(
                 name=name,
                 description=description,
                 latitude=latitude,
                 longitude=longitude,
                 address=address,
+                municipality=municipality if municipality else None,
+                state=state if state else None,
+                neighborhood=neighborhood if neighborhood else None,
                 image_filename=image_filename,
                 user_id=current_user.id
             )

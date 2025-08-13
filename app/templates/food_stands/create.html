@@ -60,15 +60,57 @@
                                       required></textarea>
                         </div>
 
-                        <!-- Dirección -->
-                        <div class="mb-3">
-                            <label for="address" class="form-label">Dirección</label>
-                            <input type="text" 
-                                   class="form-control" 
-                                   id="address" 
-                                   name="address" 
-                                   placeholder="Ej: Av. Revolución 123, Col. Centro">
-                            <div class="form-text">Opcional: dirección aproximada del puesto</div>
+                        <!-- Dirección y ubicación detallada -->
+                        <div class="row">
+                            <div class="col-md-12">
+                                <div class="mb-3">
+                                    <label for="address" class="form-label">Dirección</label>
+                                    <input type="text" 
+                                           class="form-control" 
+                                           id="address" 
+                                           name="address" 
+                                           placeholder="Ej: Av. Revolución 123, Col. Centro">
+                                    <div class="form-text">Opcional: dirección aproximada del puesto</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Ubicación detallada -->
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label for="municipality" class="form-label">Municipio/Alcaldía</label>
+                                    <input type="text" 
+                                           class="form-control" 
+                                           id="municipality" 
+                                           name="municipality" 
+                                           placeholder="Ej: Benito Juárez">
+                                    <div class="form-text">Para facilitar la búsqueda</div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label for="state" class="form-label">Estado</label>
+                                    <input type="text" 
+                                           class="form-control" 
+                                           id="state" 
+                                           name="state" 
+                                           placeholder="Ej: Ciudad de México"
+                                           value="Ciudad de México">
+                                    <div class="form-text">Estado o entidad federativa</div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label for="neighborhood" class="form-label">Colonia/Barrio</label>
+                                    <input type="text" 
+                                           class="form-control" 
+                                           id="neighborhood" 
+                                           name="neighborhood" 
+                                           placeholder="Ej: Roma Norte">
+                                    <div class="form-text">Colonia o barrio</div>
+                                </div>
+                            </div>
                         </div>
 
                         <!-- Ubicación en mapa -->

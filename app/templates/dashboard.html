@@ -18,6 +18,21 @@
         width: 60px;
         height: 60px;
         display: flex;
+    }
+    
+    .filter-card {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border: none;
+        color: white;
+    }
+    .filter-card .form-control {
+        background: rgba(255,255,255,0.9);
+        border: none;
+    }
+    .filter-card .form-select {
+        background: rgba(255,255,255,0.9);
+        border: none;
+    }
         align-items: center;
         justify-content: center;
         border-radius: 50%;
@@ -38,6 +53,83 @@
                 <a href="{{ url_for('food_stands.create_stand') }}" class="btn btn-primary">
                     <i class="bi bi-plus-circle"></i> Nuevo Puesto
                 </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filtros de búsqueda -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card filter-card shadow">
+                <div class="card-body">
+                    <h5 class="card-title text-white mb-3">
+                        <i class="bi bi-funnel"></i> Filtros de Búsqueda
+                    </h5>
+                    <form method="GET" id="filterForm">
+                        <div class="row">
+                            <div class="col-md-3 mb-3">
+                                <label for="search" class="form-label text-white">Buscar por nombre</label>
+                                <input type="text" 
+                                       class="form-control" 
+                                       id="search" 
+                                       name="search" 
+                                       placeholder="Nombre del puesto..."
+                                       value="{{ current_filters.search or '' }}">
+                            </div>
+                            <div class="col-md-2 mb-3">
+                                <label for="municipality" class="form-label text-white">Municipio</label>
+                                <select class="form-select" id="municipality" name="municipality">
+                                    <option value="">Todos</option>
+                                    {% for municipality in municipalities %}
+                                    <option value="{{ municipality }}" 
+                                            {% if current_filters.municipality == municipality %}selected{% endif %}>
+                                        {{ municipality }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-2 mb-3">
+                                <label for="state" class="form-label text-white">Estado</label>
+                                <select class="form-select" id="state" name="state">
+                                    <option value="">Todos</option>
+                                    {% for state in states %}
+                                    <option value="{{ state }}" 
+                                            {% if current_filters.state == state %}selected{% endif %}>
+                                        {{ state }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-2 mb-3">
+                                <label for="radius" class="form-label text-white">Radio (km)</label>
+                                <select class="form-select" id="radius" name="radius">
+                                    <option value="">Sin límite</option>
+                                    <option value="1" {% if current_filters.radius == 1 %}selected{% endif %}>1 km</option>
+                                    <option value="2" {% if current_filters.radius == 2 %}selected{% endif %}>2 km</option>
+                                    <option value="5" {% if current_filters.radius == 5 %}selected{% endif %}>5 km</option>
+                                    <option value="10" {% if current_filters.radius == 10 %}selected{% endif %}>10 km</option>
+                                    <option value="20" {% if current_filters.radius == 20 %}selected{% endif %}>20 km</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <label class="form-label text-white">Acciones</label>
+                                <div class="d-flex gap-2">
+                                    <button type="submit" class="btn btn-light">
+                                        <i class="bi bi-search"></i> Buscar
+                                    </button>
+                                    <button type="button" class="btn btn-warning" id="getUserLocation">
+                                        <i class="bi bi-geo-alt"></i> Mi ubicación
+                                    </button>
+                                    <a href="{{ url_for('main.dashboard') }}" class="btn btn-outline-light">
+                                        <i class="bi bi-arrow-clockwise"></i> Limpiar
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                        <input type="hidden" id="lat" name="lat" value="{{ current_filters.lat or '' }}">
+                        <input type="hidden" id="lng" name="lng" value="{{ current_filters.lng or '' }}">
+                    </form>
+                </div>
             </div>
         </div>
     </div>
@@ -295,10 +387,78 @@
 {% endblock %}
 
 {% block scripts %}
-<!-- JavaScript simplificado - Mini mapa removido -->
+<!-- JavaScript para filtros y geolocalización -->
 <script>
-console.log('🎯 DASHBOARD SIMPLIFICADO - CARGADO');
-// Mini mapa removido para evitar problemas de tiles
-// El mapa está disponible mediante el botón "Explorar"
+console.log('🎯 DASHBOARD CON FILTROS - CARGADO');
+
+// Función para obtener ubicación del usuario
+document.getElementById('getUserLocation').addEventListener('click', function() {
+    if (navigator.geolocation) {
+        this.innerHTML = '<i class="bi bi-geo-alt"></i> Obteniendo...';
+        this.disabled = true;
+        
+        navigator.geolocation.getCurrentPosition(
+            (position) => {
+                const lat = position.coords.latitude;
+                const lng = position.coords.longitude;
+                
+                document.getElementById('lat').value = lat;
+                document.getElementById('lng').value = lng;
+                
+                this.innerHTML = '<i class="bi bi-geo-alt"></i> ¡Ubicación obtenida!';
+                this.classList.remove('btn-warning');
+                this.classList.add('btn-success');
+                
+                // Auto-enviar formulario si hay un radio seleccionado
+                const radius = document.getElementById('radius').value;
+                if (radius) {
+                    document.getElementById('filterForm').submit();
+                }
+                
+                setTimeout(() => {
+                    this.innerHTML = '<i class="bi bi-geo-alt"></i> Mi ubicación';
+                    this.classList.remove('btn-success');
+                    this.classList.add('btn-warning');
+                    this.disabled = false;
+                }, 2000);
+            },
+            (error) => {
+                console.error('Error obteniendo ubicación:', error);
+                this.innerHTML = '<i class="bi bi-geo-alt"></i> Error';
+                this.classList.remove('btn-warning');
+                this.classList.add('btn-danger');
+                
+                setTimeout(() => {
+                    this.innerHTML = '<i class="bi bi-geo-alt"></i> Mi ubicación';
+                    this.classList.remove('btn-danger');
+                    this.classList.add('btn-warning');
+                    this.disabled = false;
+                }, 2000);
+            }
+        );
+    } else {
+        alert('Tu navegador no soporta geolocalización');
+    }
+});
+
+// Auto-submit al cambiar filtros (excepto búsqueda por texto)
+document.getElementById('municipality').addEventListener('change', function() {
+    document.getElementById('filterForm').submit();
+});
+
+document.getElementById('state').addEventListener('change', function() {
+    document.getElementById('filterForm').submit();
+});
+
+// Mostrar información de filtros activos
+const currentFilters = {{ current_filters | tojson }};
+if (currentFilters.lat && currentFilters.lng && currentFilters.radius) {
+    console.log(`🎯 Búsqueda por radio: ${currentFilters.radius}km desde (${currentFilters.lat}, ${currentFilters.lng})`);
+}
+
+// Indicador de resultados
+{% if filtered_stands %}
+    console.log(`📍 Resultados filtrados: {{ filtered_stands|length }} puestos encontrados`);
+{% endif %}
 </script>
 {% endblock %}

@@ -1,0 +1,440 @@
+{% extends "base.html" %}
+
+{% block title %}Agregar Puesto - Quadra{% endblock %}
+
+{% block head %}
+<!-- Leaflet CSS -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row">
+        <div class="col-lg-8 mx-auto">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">
+                        <i class="bi bi-plus-circle"></i> Agregar Nuevo Puesto de Comida
+                    </h4>
+                </div>
+                
+                <div class="card-body">
+                    <form method="POST" enctype="multipart/form-data">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                        
+                        <!-- Información básica -->
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="name" class="form-label">Nombre del Puesto *</label>
+                                    <input type="text" 
+                                           class="form-control" 
+                                           id="name" 
+                                           name="name" 
+                                           placeholder="Ej: Tacos El Güero"
+                                           required>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="image" class="form-label">Foto del Puesto</label>
+                                    <input type="file" 
+                                           class="form-control" 
+                                           id="image" 
+                                           name="image" 
+                                           accept="image/*">
+                                    <div class="form-text">Formatos: JPG, PNG, GIF (máx. 16MB)</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Descripción -->
+                        <div class="mb-3">
+                            <label for="description" class="form-label">Descripción *</label>
+                            <textarea class="form-control" 
+                                      id="description" 
+                                      name="description" 
+                                      rows="4" 
+                                      placeholder="Describe el puesto: tipo de comida, especialidades, horarios, etc."
+                                      required></textarea>
+                        </div>
+
+                        <!-- Dirección y ubicación detallada -->
+                        <div class="row">
+                            <div class="col-md-12">
+                                <div class="mb-3">
+                                    <label for="address" class="form-label">Dirección</label>
+                                    <input type="text" 
+                                           class="form-control" 
+                                           id="address" 
+                                           name="address" 
+                                           placeholder="Ej: Av. Revolución 123, Col. Centro">
+                                    <div class="form-text">Opcional: dirección aproximada del puesto</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Ubicación detallada -->
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label for="municipality" class="form-label">Municipio/Alcaldía</label>
+                                    <input type="text" 
+                                           class="form-control" 
+                                           id="municipality" 
+                                           name="municipality" 
+                                           placeholder="Ej: Benito Juárez">
+                                    <div class="form-text">Para facilitar la búsqueda</div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label for="state" class="form-label">Estado</label>
+                                    <input type="text" 
+                                           class="form-control" 
+                                           id="state" 
+                                           name="state" 
+                                           placeholder="Ej: Ciudad de México"
+                                           value="Ciudad de México">
+                                    <div class="form-text">Estado o entidad federativa</div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label for="neighborhood" class="form-label">Colonia/Barrio</label>
+                                    <input type="text" 
+                                           class="form-control" 
+                                           id="neighborhood" 
+                                           name="neighborhood" 
+                                           placeholder="Ej: Roma Norte">
+                                    <div class="form-text">Colonia o barrio</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Ubicación en mapa -->
+                        <div class="mb-3">
+                            <label class="form-label">Ubicación en el Mapa *</label>
+                            <div class="alert alert-info">
+                                <i class="bi bi-info-circle"></i>
+                                Haz clic en el mapa para marcar la ubicación exacta del puesto
+                            </div>
+                            
+                            <!-- Mapa -->
+                            <div id="map" style="height: 400px; border-radius: 8px; border: 1px solid #dee2e6;"></div>
+                            
+                            <!-- Coordenadas ocultas -->
+                            <input type="hidden" id="latitude" name="latitude" required>
+                            <input type="hidden" id="longitude" name="longitude" required>
+                            
+                            <!-- Mostrar coordenadas seleccionadas -->
+                            <div class="mt-2">
+                                <small class="text-muted">
+                                    <i class="bi bi-geo-alt"></i>
+                                    <span id="coords-display">Selecciona una ubicación en el mapa</span>
+                                </small>
+                                <div class="mt-1">
+                                    <small class="text-info">
+                                        <i class="bi bi-info-circle"></i>
+                                        Al seleccionar una ubicación, se completará automáticamente la dirección
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Botones -->
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-check-circle"></i> Crear Puesto
+                            </button>
+                            <a href="{{ url_for('food_stands.list_stands') }}" class="btn btn-outline-secondary">
+                                <i class="bi bi-x-circle"></i> Cancelar
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<!-- Leaflet JS -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Inicializar mapa centrado en una ubicación por defecto
+    const map = L.map('map').setView([19.4326, -99.1332], 13); // Ciudad de México por defecto
+
+    // Agregar tiles del mapa
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap contributors'
+    }).addTo(map);
+
+    let marker = null;
+
+    // Función para actualizar la ubicación con geocodificación inversa
+    function updateLocation(lat, lng) {
+        document.getElementById('latitude').value = lat;
+        document.getElementById('longitude').value = lng;
+        document.getElementById('coords-display').textContent = 
+            `Latitud: ${lat.toFixed(6)}, Longitud: ${lng.toFixed(6)}`;
+        
+        // Mostrar indicador de carga
+        const addressField = document.getElementById('address');
+        const municipalityField = document.getElementById('municipality');
+        const stateField = document.getElementById('state');
+        const neighborhoodField = document.getElementById('neighborhood');
+        
+        addressField.value = 'Obteniendo dirección...';
+        addressField.disabled = true;
+        
+        // Realizar geocodificación inversa usando Nominatim (OpenStreetMap)
+        fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&addressdetails=1&accept-language=es`)
+            .then(response => response.json())
+            .then(data => {
+                console.log('Datos de geocodificación:', data);
+                
+                // Restablecer campo de dirección
+                addressField.disabled = false;
+                
+                if (data && data.display_name) {
+                    // Construir dirección formateada
+                    const address = data.address || {};
+                    let formattedAddress = '';
+                    
+                    // Número y calle
+                    if (address.house_number && address.road) {
+                        formattedAddress = `${address.road} ${address.house_number}`;
+                    } else if (address.road) {
+                        formattedAddress = address.road;
+                    }
+                    
+                    // Agregar colonia/barrio si existe
+                    if (address.neighbourhood || address.suburb) {
+                        const neighborhood = address.neighbourhood || address.suburb;
+                        if (formattedAddress) {
+                            formattedAddress += `, ${neighborhood}`;
+                        } else {
+                            formattedAddress = neighborhood;
+                        }
+                        neighborhoodField.value = neighborhood;
+                    }
+                    
+                    // Rellenar campos automáticamente
+                    if (formattedAddress) {
+                        addressField.value = formattedAddress;
+                        addressField.classList.add('auto-filled');
+                        setTimeout(() => addressField.classList.remove('auto-filled'), 3000);
+                    } else {
+                        addressField.value = data.display_name.split(',')[0] || '';
+                    }
+                    
+                    // Municipio/Ciudad
+                    const municipality = address.city || address.town || address.municipality || 
+                                       address.city_district || address.borough;
+                    if (municipality) {
+                        municipalityField.value = municipality;
+                        municipalityField.classList.add('auto-filled');
+                        setTimeout(() => municipalityField.classList.remove('auto-filled'), 3000);
+                    }
+                    
+                    // Estado
+                    const state = address.state || address.province;
+                    if (state) {
+                        stateField.value = state;
+                        stateField.classList.add('auto-filled');
+                        setTimeout(() => stateField.classList.remove('auto-filled'), 3000);
+                    } else {
+                        // Por defecto para México
+                        stateField.value = 'Ciudad de México';
+                    }
+                    
+                    // Agregar efecto visual a colonia si se completó
+                    if (address.neighbourhood || address.suburb) {
+                        neighborhoodField.classList.add('auto-filled');
+                        setTimeout(() => neighborhoodField.classList.remove('auto-filled'), 3000);
+                    }
+                    
+                    // Mostrar mensaje de éxito
+                    showAddressMessage('✅ Dirección obtenida automáticamente', 'success');
+                    
+                } else {
+                    addressField.value = '';
+                    showAddressMessage('⚠️ No se pudo obtener la dirección exacta', 'warning');
+                }
+            })
+            .catch(error => {
+                console.error('Error en geocodificación:', error);
+                addressField.disabled = false;
+                addressField.value = '';
+                showAddressMessage('❌ Error al obtener la dirección', 'error');
+            });
+    }
+    
+    // Función para mostrar mensajes de estado de la dirección
+    function showAddressMessage(message, type) {
+        // Buscar mensaje anterior y removerlo
+        const existingMessage = document.querySelector('.address-message');
+        if (existingMessage) {
+            existingMessage.remove();
+        }
+        
+        // Crear nuevo mensaje
+        const messageDiv = document.createElement('div');
+        messageDiv.className = `address-message alert alert-${type === 'success' ? 'success' : type === 'warning' ? 'warning' : 'danger'} alert-dismissible fade show mt-2`;
+        messageDiv.innerHTML = `
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
+        
+        // Insertar después del campo de dirección
+        const addressField = document.getElementById('address');
+        addressField.parentNode.appendChild(messageDiv);
+        
+        // Auto-remover después de 5 segundos
+        setTimeout(() => {
+            if (messageDiv && messageDiv.parentNode) {
+                messageDiv.remove();
+            }
+        }, 5000);
+    }
+
+    // Evento de clic en el mapa
+    map.on('click', function(e) {
+        const lat = e.latlng.lat;
+        const lng = e.latlng.lng;
+
+        // Remover marker anterior si existe
+        if (marker) {
+            map.removeLayer(marker);
+        }
+
+        // Agregar nuevo marker
+        marker = L.marker([lat, lng]).addTo(map);
+        
+        // Actualizar coordenadas
+        updateLocation(lat, lng);
+    });
+
+    // Si la URL tiene query params lat/lng, prellenar y colocar marker automáticamente
+    const urlParams = new URLSearchParams(window.location.search);
+    const qlat = parseFloat(urlParams.get('lat'));
+    const qlng = parseFloat(urlParams.get('lng'));
+    if (!isNaN(qlat) && !isNaN(qlng)) {
+        // Centrar mapa y colocar marker
+        map.setView([qlat, qlng], 16);
+
+        if (marker) {
+            map.removeLayer(marker);
+        }
+        marker = L.marker([qlat, qlng]).addTo(map);
+        updateLocation(qlat, qlng);
+        // Abrir popup breve para confirmar
+        marker.bindPopup('Ubicación precargada desde el mapa. Puedes moverla si es necesario.').openPopup();
+    }
+
+    // Intentar obtener la ubicación actual del usuario
+    if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(function(position) {
+            const lat = position.coords.latitude;
+            const lng = position.coords.longitude;
+            
+            // Centrar el mapa en la ubicación actual
+            map.setView([lat, lng], 15);
+            
+            // Agregar marker temporal para mostrar la ubicación actual
+            const currentLocationIcon = L.divIcon({
+                className: 'current-location-marker',
+                html: '<i class="bi bi-geo-alt-fill text-primary" style="font-size: 24px;"></i>',
+                iconSize: [24, 24],
+                iconAnchor: [12, 24]
+            });
+            
+            L.marker([lat, lng], {icon: currentLocationIcon})
+                .addTo(map)
+                .bindPopup('Tu ubicación actual')
+                .openPopup();
+        }, function(error) {
+            console.log('No se pudo obtener la ubicación:', error.message);
+        });
+    }
+
+    // Validación del formulario
+    document.querySelector('form').addEventListener('submit', function(e) {
+        const lat = document.getElementById('latitude').value;
+        const lng = document.getElementById('longitude').value;
+        
+        if (!lat || !lng) {
+            e.preventDefault();
+            alert('Por favor, selecciona una ubicación en el mapa.');
+            return false;
+        }
+    });
+});
+</script>
+
+<style>
+.current-location-marker {
+    background: none;
+    border: none;
+}
+
+.leaflet-popup-content-wrapper {
+    border-radius: 8px;
+}
+
+/* Estilos para mensajes de dirección */
+.address-message {
+    font-size: 0.875rem;
+    border-radius: 6px;
+    animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Efecto de carga en campo de dirección */
+input[disabled] {
+    background-color: #f8f9fa !important;
+    opacity: 0.8;
+    position: relative;
+}
+
+/* Indicador visual de campo auto-completado */
+.auto-filled {
+    border-color: #198754 !important;
+    box-shadow: 0 0 0 0.25rem rgba(25, 135, 84, 0.25) !important;
+}
+
+/* Mejorar visibilidad del mapa */
+#map {
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    transition: box-shadow 0.3s ease;
+}
+
+#map:hover {
+    box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+}
+
+/* Estilo para coordenadas */
+#coords-display {
+    font-family: 'Courier New', monospace;
+    background: #f8f9fa;
+    padding: 2px 6px;
+    border-radius: 4px;
+    border: 1px solid #dee2e6;
+}
+</style>
+{% endblock %}

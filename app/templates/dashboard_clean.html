@@ -1,0 +1,472 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Quadra{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<style>
+    .mini-map-container {
+        position: relative;
+        height: 250px;
+        width: 100%;
+        border-radius: 10px;
+        overflow: hidden;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        border: 2px solid transparent;
+        background-color: #f8f9fa;
+    }
+    
+    .mini-map-container:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 15px rgba(0, 0, 0, 0.2);
+        border-color: #0d6efd;
+    }
+    
+    .mini-map {
+        width: 100%;
+        height: 100%;
+        z-index: 1;
+    }
+    
+    .map-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.05);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+        z-index: 1000;
+        pointer-events: none;
+    }
+    
+    .mini-map-container:hover .map-overlay {
+        opacity: 1;
+    }
+    
+    .expand-icon {
+        background: rgba(255, 255, 255, 0.9);
+        border-radius: 50%;
+        width: 50px;
+        height: 50px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        color: #0d6efd;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    }
+    
+    .dashboard-card {
+        transition: transform 0.2s ease;
+    }
+    
+    .dashboard-card:hover {
+        transform: translateY(-2px);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h1 class="h3 mb-0">Dashboard</h1>
+                    <p class="text-muted">Bienvenido, {{ current_user.username }}</p>
+                </div>
+                <a href="{{ url_for('food_stands.create_stand') }}" class="btn btn-primary">
+                    <i class="bi bi-plus-circle"></i> Nuevo Puesto
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Stats Cards -->
+    <div class="row mb-4">
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="card dashboard-card border-0 shadow-sm h-100">
+                <div class="card-body text-center">
+                    <div class="text-primary mb-2">
+                        <i class="bi bi-shop display-4"></i>
+                    </div>
+                    <h4 class="fw-bold">{{ user_stats.total_stands }}</h4>
+                    <p class="text-muted mb-0">Puestos Agregados</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="card dashboard-card border-0 shadow-sm h-100">
+                <div class="card-body text-center">
+                    <div class="text-success mb-2">
+                        <i class="bi bi-star-fill display-4"></i>
+                    </div>
+                    <h4 class="fw-bold">{{ user_stats.total_reviews }}</h4>
+                    <p class="text-muted mb-0">Reseñas Recibidas</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="card dashboard-card border-0 shadow-sm h-100">
+                <div class="card-body text-center">
+                    <div class="text-warning mb-2">
+                        <i class="bi bi-eye-fill display-4"></i>
+                    </div>
+                    <h4 class="fw-bold">{{ user_stats.total_views }}</h4>
+                    <p class="text-muted mb-0">Visualizaciones</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="card dashboard-card border-0 shadow-sm h-100">
+                <div class="card-body text-center">
+                    <div class="text-info mb-2">
+                        <i class="bi bi-graph-up display-4"></i>
+                    </div>
+                    <h4 class="fw-bold">
+                        {% if user_stats.average_rating %}
+                            {{ "%.1f"|format(user_stats.average_rating) }}⭐
+                        {% else %}
+                            N/A
+                        {% endif %}
+                    </h4>
+                    <p class="text-muted mb-0">Promedio</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="row mb-4">
+        <div class="col-md-4 mb-3">
+            <div class="card dashboard-card border-0 shadow-sm h-100">
+                <div class="card-body text-center">
+                    <i class="bi bi-plus-circle text-primary display-4 mb-3"></i>
+                    <h5 class="card-title">Agregar Puesto</h5>
+                    <p class="card-text text-muted">Comparte un nuevo puesto de comida con la comunidad</p>
+                    <a href="{{ url_for('food_stands.create_stand') }}" class="btn btn-primary">
+                        <i class="bi bi-plus"></i> Crear Puesto
+                    </a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4 mb-3">
+            <div class="card dashboard-card border-0 shadow-sm h-100">
+                <div class="card-body text-center">
+                    <i class="bi bi-list-ul text-success display-4 mb-3"></i>
+                    <h5 class="card-title">Mis Puestos</h5>
+                    <p class="card-text text-muted">Gestiona y edita tus puestos registrados</p>
+                    <a href="{{ url_for('food_stands.my_stands') }}" class="btn btn-success">
+                        <i class="bi bi-eye"></i> Ver Mis Puestos
+                    </a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4 mb-3">
+            <div class="card dashboard-card border-0 shadow-sm h-100">
+                <div class="card-body text-center">
+                    <i class="bi bi-search text-info display-4 mb-3"></i>
+                    <h5 class="card-title">Explorar</h5>
+                    <p class="card-text text-muted">Descubre nuevos puestos de comida en el mapa</p>
+                    <a href="{{ url_for('main.index') }}" class="btn btn-info">
+                        <i class="bi bi-map"></i> Ir al Mapa
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Mapa Compacto -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-transparent">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-geo-alt-fill text-primary"></i> 
+                        Vista Rápida del Mapa
+                    </h5>
+                    <small class="text-muted">Haz clic para expandir y explorar</small>
+                </div>
+                <div class="card-body p-0">
+                    <div class="mini-map-container" onclick="openMapModal()">
+                        <div id="miniMap" class="mini-map"></div>
+                        <div class="map-overlay">
+                            <div class="expand-icon">
+                                <i class="bi bi-arrows-fullscreen"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Activity -->
+    {% if recent_stands %}
+    <div class="row">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-transparent">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-clock text-primary"></i> 
+                        Puestos Recientes
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        {% for stand in recent_stands[:6] %}
+                        <div class="col-lg-4 col-md-6 mb-3">
+                            <div class="card dashboard-card border-0 shadow-sm h-100">
+                                {% if stand.image_filename %}
+                                <img src="{{ url_for('static', filename='uploads/' + stand.image_filename) }}" 
+                                     class="card-img-top" style="height: 200px; object-fit: cover;">
+                                {% else %}
+                                <div class="card-img-top bg-light d-flex align-items-center justify-content-center" 
+                                     style="height: 200px;">
+                                    <i class="bi bi-image text-muted" style="font-size: 3rem;"></i>
+                                </div>
+                                {% endif %}
+                                <div class="card-body">
+                                    <h6 class="card-title">{{ stand.name }}</h6>
+                                    <p class="card-text text-muted small">{{ stand.description[:80] }}...</p>
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <small class="text-muted">
+                                            {% if stand.average_rating %}
+                                                {% for i in range(1, 6) %}
+                                                    {% if i <= stand.average_rating %}
+                                                        <i class="bi bi-star-fill text-warning"></i>
+                                                    {% else %}
+                                                        <i class="bi bi-star text-muted"></i>
+                                                    {% endif %}
+                                                {% endfor %}
+                                            {% else %}
+                                                Sin calificar
+                                            {% endif %}
+                                        </small>
+                                        <a href="{{ url_for('food_stands.view_stand', id=stand.id) }}" 
+                                           class="btn btn-sm btn-outline-primary">Ver</a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Modal para Mapa Expandido -->
+<div class="modal fade" id="mapModal" tabindex="-1" aria-labelledby="mapModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="mapModalLabel">
+                    <i class="bi bi-geo-alt-fill"></i> Mapa Interactivo - Puestos de Comida
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-0">
+                <div id="fullMap" style="height: 70vh;"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                <a href="{{ url_for('main.index') }}" class="btn btn-primary">
+                    <i class="bi bi-fullscreen"></i> Ver Mapa Completo
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('Inicializando mapas del dashboard...');
+    
+    // Datos de puestos
+    const recentStands = {{ recent_stands|tojson if recent_stands else []|tojson }};
+    console.log('Puestos recientes:', recentStands);
+    
+    let miniMap, fullMap;
+    let userLocationMarker = null;
+    
+    // Función para inicializar el mini mapa
+    function initMiniMap() {
+        try {
+            console.log('Creando mini mapa...');
+            
+            // Verificar que el contenedor existe
+            const miniMapContainer = document.getElementById('miniMap');
+            if (!miniMapContainer) {
+                console.error('Contenedor de mini mapa no encontrado');
+                return;
+            }
+            
+            // Crear el mapa
+            miniMap = L.map('miniMap', {
+                zoomControl: false,
+                dragging: false,
+                scrollWheelZoom: false,
+                doubleClickZoom: false,
+                boxZoom: false,
+                keyboard: false,
+                touchZoom: false
+            }).setView([19.4326, -99.1332], 11);
+            
+            // Agregar tiles
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors'
+            }).addTo(miniMap);
+            
+            console.log('Mini mapa creado exitosamente');
+            
+            // Agregar marcadores de puestos recientes
+            if (recentStands && recentStands.length > 0) {
+                recentStands.forEach(stand => {
+                    L.marker([stand.latitude, stand.longitude])
+                        .addTo(miniMap)
+                        .bindPopup(`<strong>${stand.name}</strong><br>${stand.description.substring(0, 50)}...`);
+                });
+                
+                // Ajustar vista a los marcadores
+                const group = new L.featureGroup(miniMap._layers);
+                if (Object.keys(miniMap._layers).length > 1) {
+                    miniMap.fitBounds(group.getBounds().pad(0.1));
+                }
+            }
+            
+            // Geolocalización automática
+            attemptAutoLocation();
+            
+        } catch (error) {
+            console.error('Error inicializando mini mapa:', error);
+            // Mostrar mensaje de error en el contenedor
+            const container = document.getElementById('miniMap');
+            if (container) {
+                container.innerHTML = `
+                    <div class="d-flex align-items-center justify-content-center h-100 text-muted">
+                        <div class="text-center">
+                            <i class="bi bi-exclamation-triangle display-4 mb-2"></i>
+                            <p>Error cargando el mapa</p>
+                            <small>Verifica tu conexión a internet</small>
+                        </div>
+                    </div>
+                `;
+            }
+        }
+    }
+    
+    // Función para geolocalización automática
+    function attemptAutoLocation() {
+        if (navigator.geolocation && miniMap) {
+            const options = {
+                enableHighAccuracy: true,
+                timeout: 8000,
+                maximumAge: 300000
+            };
+            
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    const lat = position.coords.latitude;
+                    const lng = position.coords.longitude;
+                    
+                    // Centrar mini mapa en la ubicación del usuario
+                    miniMap.setView([lat, lng], 14);
+                    
+                    // Agregar marcador de ubicación
+                    if (userLocationMarker) {
+                        miniMap.removeLayer(userLocationMarker);
+                    }
+                    
+                    userLocationMarker = L.marker([lat, lng], {
+                        icon: L.divIcon({
+                            className: 'current-location-marker',
+                            html: '<div style="background: #dc3545; width: 15px; height: 15px; border-radius: 50%; border: 2px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.3);"></div>',
+                            iconSize: [19, 19],
+                            iconAnchor: [9, 9]
+                        })
+                    }).addTo(miniMap);
+                    
+                    userLocationMarker.bindPopup('Tu ubicación actual');
+                    
+                    console.log('Ubicación detectada automáticamente');
+                },
+                (error) => {
+                    console.log('Geolocalización no disponible:', error.message);
+                },
+                options
+            );
+        }
+    }
+    
+    // Función para abrir modal del mapa
+    window.openMapModal = function() {
+        const modal = new bootstrap.Modal(document.getElementById('mapModal'));
+        modal.show();
+        
+        // Inicializar mapa completo cuando se abre el modal
+        setTimeout(() => {
+            if (!fullMap) {
+                fullMap = L.map('fullMap').setView([19.4326, -99.1332], 11);
+                
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    attribution: '© OpenStreetMap contributors'
+                }).addTo(fullMap);
+                
+                // Agregar marcadores
+                if (recentStands && recentStands.length > 0) {
+                    recentStands.forEach(stand => {
+                        L.marker([stand.latitude, stand.longitude])
+                            .addTo(fullMap)
+                            .bindPopup(`
+                                <div class="text-center">
+                                    <strong>${stand.name}</strong><br>
+                                    <small class="text-muted">${stand.description.substring(0, 100)}...</small><br>
+                                    <a href="/stands/${stand.id}" class="btn btn-sm btn-primary mt-2">Ver Detalles</a>
+                                </div>
+                            `);
+                    });
+                }
+                
+                // Agregar ubicación del usuario si existe
+                if (userLocationMarker) {
+                    const userPos = userLocationMarker.getLatLng();
+                    L.marker([userPos.lat, userPos.lng], {
+                        icon: L.divIcon({
+                            className: 'current-location-marker',
+                            html: '<div style="background: #dc3545; width: 20px; height: 20px; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 6px rgba(0,0,0,0.3);"></div>',
+                            iconSize: [26, 26],
+                            iconAnchor: [13, 13]
+                        })
+                    }).addTo(fullMap).bindPopup('Tu ubicación actual');
+                    
+                    fullMap.setView([userPos.lat, userPos.lng], 14);
+                }
+            }
+            
+            // Invalidar el tamaño del mapa para que se renderice correctamente
+            setTimeout(() => {
+                if (fullMap) {
+                    fullMap.invalidateSize();
+                }
+            }, 100);
+        }, 300);
+    };
+    
+    // Inicializar mini mapa
+    initMiniMap();
+});
+</script>
+{% endblock %}

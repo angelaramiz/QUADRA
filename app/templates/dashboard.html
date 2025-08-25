@@ -1,0 +1,685 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Quadra{% endblock %}
+
+{% block extra_css %}
+<!-- CSS simplificado - Mini mapa removido -->
+<style>
+    .dashboard-card {
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    
+    .dashboard-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    }
+    
+    .stat-icon {
+        width: 60px;
+        height: 60px;
+        display: flex;
+    }
+    
+    .filter-card {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border: none;
+        color: white;
+    }
+    .filter-card .form-control {
+        background: rgba(255,255,255,0.9);
+        border: none;
+    }
+    .filter-card .form-select {
+        background: rgba(255,255,255,0.9);
+        border: none;
+    }
+    
+    /* Estilos para vista expandible */
+    .list-group-item {
+        transition: all 0.2s ease;
+        border-radius: 8px !important;
+    }
+    
+    .list-group-item:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        background-color: #f8f9fa;
+    }
+    
+    .btn-group .btn {
+        border-radius: 6px;
+    }
+    
+    .btn-group .btn.active {
+        background-color: #0d6efd;
+        border-color: #0d6efd;
+        color: white;
+    }
+    
+    #toggleRecentView {
+        transition: all 0.3s ease;
+    }
+    
+    #toggleRecentView:hover {
+        transform: scale(1.05);
+    }
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+        font-size: 24px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h1 class="h3 mb-0">Dashboard</h1>
+                    <p class="text-muted">Bienvenido, {{ current_user.username }}</p>
+                </div>
+                <a href="{{ url_for('food_stands.create_stand') }}" class="btn btn-primary">
+                    <i class="bi bi-plus-circle"></i> Nuevo Puesto
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filtros de búsqueda -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card filter-card shadow">
+                <div class="card-body">
+                    <h5 class="card-title text-white mb-3">
+                        <i class="bi bi-funnel"></i> Filtros de Búsqueda
+                    </h5>
+                    <form method="GET" id="filterForm">
+                        <div class="row">
+                            <div class="col-md-3 mb-3">
+                                <label for="search" class="form-label text-white">Buscar por nombre</label>
+                                <input type="text" 
+                                       class="form-control" 
+                                       id="search" 
+                                       name="search" 
+                                       placeholder="Nombre del puesto..."
+                                       value="{{ current_filters.search or '' }}">
+                            </div>
+                            <div class="col-md-2 mb-3">
+                                <label for="municipality" class="form-label text-white">Municipio</label>
+                                <select class="form-select" id="municipality" name="municipality">
+                                    <option value="">Todos</option>
+                                    {% for municipality in municipalities %}
+                                    <option value="{{ municipality }}" 
+                                            {% if current_filters.municipality == municipality %}selected{% endif %}>
+                                        {{ municipality }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-2 mb-3">
+                                <label for="state" class="form-label text-white">Estado</label>
+                                <select class="form-select" id="state" name="state">
+                                    <option value="">Todos</option>
+                                    {% for state in states %}
+                                    <option value="{{ state }}" 
+                                            {% if current_filters.state == state %}selected{% endif %}>
+                                        {{ state }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-2 mb-3">
+                                <label for="radius" class="form-label text-white">Radio (km)</label>
+                                <select class="form-select" id="radius" name="radius">
+                                    <option value="">Sin límite</option>
+                                    <option value="1" {% if current_filters.radius == 1 %}selected{% endif %}>1 km</option>
+                                    <option value="2" {% if current_filters.radius == 2 %}selected{% endif %}>2 km</option>
+                                    <option value="5" {% if current_filters.radius == 5 %}selected{% endif %}>5 km</option>
+                                    <option value="10" {% if current_filters.radius == 10 %}selected{% endif %}>10 km</option>
+                                    <option value="20" {% if current_filters.radius == 20 %}selected{% endif %}>20 km</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <label class="form-label text-white">Acciones</label>
+                                <div class="d-flex gap-2">
+                                    <button type="submit" class="btn btn-light">
+                                        <i class="bi bi-search"></i> Buscar
+                                    </button>
+                                    <button type="button" class="btn btn-warning" id="getUserLocation">
+                                        <i class="bi bi-geo-alt"></i> Mi ubicación
+                                    </button>
+                                    <a href="{{ url_for('main.dashboard') }}" class="btn btn-outline-light">
+                                        <i class="bi bi-arrow-clockwise"></i> Limpiar
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                        <input type="hidden" id="lat" name="lat" value="{{ current_filters.lat or '' }}">
+                        <input type="hidden" id="lng" name="lng" value="{{ current_filters.lng or '' }}">
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Stats Cards -->
+    <div class="row mb-4">
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="card dashboard-card border-0 shadow-sm h-100">
+                <div class="card-body text-center">
+                    <div class="text-primary mb-2">
+                        <i class="bi bi-shop display-4"></i>
+                    </div>
+                    <h4 class="fw-bold">{{ my_stands|length if my_stands else 0 }}</h4>
+                    <p class="text-muted mb-0">Mis Puestos</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="card dashboard-card border-0 shadow-sm h-100">
+                <div class="card-body text-center">
+                    <div class="text-success mb-2">
+                        <i class="bi bi-star-fill display-4"></i>
+                    </div>
+                    <h4 class="fw-bold">
+                        {% set total_reviews = my_stands|sum(attribute='total_reviews') if my_stands else 0 %}
+                        {{ total_reviews }}
+                    </h4>
+                    <p class="text-muted mb-0">Reseñas Recibidas</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="card dashboard-card border-0 shadow-sm h-100">
+                <div class="card-body text-center">
+                    <div class="text-warning mb-2">
+                        <i class="bi bi-eye-fill display-4"></i>
+                    </div>
+                    <h4 class="fw-bold">{{ recent_stands|length if recent_stands else 0 }}</h4>
+                    <p class="text-muted mb-0">Puestos Recientes</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="card dashboard-card border-0 shadow-sm h-100">
+                <div class="card-body text-center">
+                    <div class="text-info mb-2">
+                        <i class="bi bi-graph-up display-4"></i>
+                    </div>
+                    <h4 class="fw-bold">
+                        {% if my_stands %}
+                            {% set total_rating = my_stands|selectattr('average_rating')|map(attribute='average_rating')|sum %}
+                            {% set count_rated = my_stands|selectattr('average_rating')|list|length %}
+                            {% if count_rated > 0 %}
+                                {{ "%.1f"|format(total_rating / count_rated) }}⭐
+                            {% else %}
+                                N/A
+                            {% endif %}
+                        {% else %}
+                            N/A
+                        {% endif %}
+                    </h4>
+                    <p class="text-muted mb-0">Mi Promedio</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="row mb-4">
+        <div class="col-md-4 mb-3">
+            <div class="card dashboard-card border-0 shadow-sm h-100">
+                <div class="card-body text-center">
+                    <i class="bi bi-plus-circle text-primary display-4 mb-3"></i>
+                    <h5 class="card-title">Agregar Puesto</h5>
+                    <p class="card-text text-muted">Comparte un nuevo puesto de comida con la comunidad</p>
+                    <a href="{{ url_for('food_stands.create_stand') }}" class="btn btn-primary">
+                        <i class="bi bi-plus"></i> Crear Puesto
+                    </a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4 mb-3">
+            <div class="card dashboard-card border-0 shadow-sm h-100">
+                <div class="card-body text-center">
+                    <i class="bi bi-list-ul text-success display-4 mb-3"></i>
+                    <h5 class="card-title">Mis Puestos</h5>
+                    <p class="card-text text-muted">Gestiona y edita tus puestos registrados</p>
+                    <a href="{{ url_for('food_stands.my_stands') }}" class="btn btn-success">
+                        <i class="bi bi-eye"></i> Ver Mis Puestos
+                    </a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4 mb-3">
+            <div class="card dashboard-card border-0 shadow-sm h-100">
+                <div class="card-body text-center">
+                    <i class="bi bi-search text-info display-4 mb-3"></i>
+                    <h5 class="card-title">Explorar</h5>
+                    <p class="card-text text-muted">Descubre nuevos puestos de comida en el mapa</p>
+                    <a href="{{ url_for('main.index') }}" class="btn btn-info">
+                        <i class="bi bi-map"></i> Ir al Mapa
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Configuración de Cuenta -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-transparent">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-person-gear text-warning"></i> 
+                        Configuración de Cuenta
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <div class="card dashboard-card border-0 shadow-sm h-100 bg-light">
+                                <div class="card-body text-center">
+                                    <i class="bi bi-shield-lock text-warning display-4 mb-3"></i>
+                                    <h6 class="card-title">Cambiar Contraseña</h6>
+                                    <p class="card-text text-muted small">Actualiza tu contraseña de forma segura</p>
+                                    <a href="{{ url_for('auth.change_password') }}" class="btn btn-warning">
+                                        <i class="bi bi-gear"></i> Cambiar
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <div class="card dashboard-card border-0 shadow-sm h-100 bg-light">
+                                <div class="card-body text-center">
+                                    <i class="bi bi-person-circle text-info display-4 mb-3"></i>
+                                    <h6 class="card-title">Mi Perfil</h6>
+                                    <p class="card-text text-muted small">
+                                        <strong>Usuario:</strong> {{ current_user.username }}<br>
+                                        <strong>Email:</strong> {{ current_user.email }}
+                                    </p>
+                                    <span class="badge bg-success">Activo</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <div class="card dashboard-card border-0 shadow-sm h-100 bg-light">
+                                <div class="card-body text-center">
+                                    <i class="bi bi-box-arrow-right text-danger display-4 mb-3"></i>
+                                    <h6 class="card-title">Cerrar Sesión</h6>
+                                    <p class="card-text text-muted small">Sal de forma segura de tu cuenta</p>
+                                    <a href="{{ url_for('auth.logout') }}" class="btn btn-outline-danger">
+                                        <i class="bi bi-power"></i> Salir
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Mapa Compacto - REMOVIDO para evitar problemas de tiles -->
+    <!-- <div class="row mb-4">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-transparent">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-geo-alt-fill text-primary"></i> 
+                        Vista Rápida del Mapa
+                    </h5>
+                    <small class="text-muted">Haz clic para expandir y explorar</small>
+                </div>
+                <div class="card-body p-0">
+                    <div class="mini-map-container" id="miniMapContainer">
+                        <div id="miniMap" class="mini-map">
+                            <div style="width: 100%; height: 100%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center; color: white; font-size: 16px;">
+                                <div class="text-center">
+                                    <i class="fas fa-map-marked-alt fa-3x mb-3"></i>
+                                    <p class="mb-0"><strong>Mini Mapa</strong></p>
+                                    <small>Inicializando...</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="map-overlay">
+                            <div class="expand-icon">
+                                <i class="bi bi-arrows-fullscreen"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div> -->
+
+    <!-- Recent Activity -->
+    {% if recent_stands %}
+    <div class="row">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-transparent">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="card-title mb-0">
+                            <i class="bi bi-clock text-primary"></i> 
+                            Puestos Recientes
+                        </h5>
+                        <div class="d-flex gap-2">
+                            <button class="btn btn-sm btn-outline-primary" id="toggleRecentView" data-expanded="false">
+                                <i class="bi bi-arrows-expand"></i> Ver todos
+                            </button>
+                            <div class="btn-group btn-group-sm d-none" id="viewModeButtons" role="group">
+                                <button type="button" class="btn btn-outline-secondary active" id="cardViewBtn">
+                                    <i class="bi bi-grid-3x3-gap"></i> Tarjetas
+                                </button>
+                                <button type="button" class="btn btn-outline-secondary" id="listViewBtn">
+                                    <i class="bi bi-list-ul"></i> Lista
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <!-- Vista compacta inicial (solo 3 puestos) -->
+                    <div class="row" id="compactRecentView">
+                        {% for stand in recent_stands[:3] %}
+                        <div class="col-lg-4 col-md-6 mb-3">
+                            <div class="card dashboard-card border-0 shadow-sm h-100">
+                                {% if stand.image_filename %}
+                                <img src="{{ url_for('static', filename='uploads/' + stand.image_filename) }}" 
+                                     class="card-img-top" style="height: 180px; object-fit: cover;">
+                                {% else %}
+                                <div class="card-img-top bg-light d-flex align-items-center justify-content-center" 
+                                     style="height: 180px;">
+                                    <i class="bi bi-image text-muted" style="font-size: 2.5rem;"></i>
+                                </div>
+                                {% endif %}
+                                <div class="card-body">
+                                    <h6 class="card-title">{{ stand.name }}</h6>
+                                    <p class="card-text text-muted small">{{ stand.description[:60] }}...</p>
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <small class="text-muted">
+                                            {% if stand.average_rating %}
+                                                {% for i in range(1, 6) %}
+                                                    {% if i <= stand.average_rating %}
+                                                        <i class="bi bi-star-fill text-warning"></i>
+                                                    {% else %}
+                                                        <i class="bi bi-star text-muted"></i>
+                                                    {% endif %}
+                                                {% endfor %}
+                                            {% else %}
+                                                Sin calificar
+                                            {% endif %}
+                                        </small>
+                                        <a href="{{ url_for('food_stands.view_stand', id=stand.id) }}" 
+                                           class="btn btn-sm btn-outline-primary">Ver</a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+
+                    <!-- Vista expandida (todos los puestos) -->
+                    <div class="d-none" id="expandedRecentView">
+                        <!-- Vista de tarjetas -->
+                        <div class="row" id="cardView">
+                            {% for stand in recent_stands %}
+                            <div class="col-lg-3 col-md-4 col-sm-6 mb-4">
+                                <div class="card dashboard-card border-0 shadow-sm h-100">
+                                    {% if stand.image_filename %}
+                                    <img src="{{ url_for('static', filename='uploads/' + stand.image_filename) }}" 
+                                         class="card-img-top" style="height: 200px; object-fit: cover;">
+                                    {% else %}
+                                    <div class="card-img-top bg-light d-flex align-items-center justify-content-center" 
+                                         style="height: 200px;">
+                                        <i class="bi bi-image text-muted" style="font-size: 3rem;"></i>
+                                    </div>
+                                    {% endif %}
+                                    <div class="card-body">
+                                        <h6 class="card-title">{{ stand.name }}</h6>
+                                        <p class="card-text text-muted small">{{ stand.description[:80] }}...</p>
+                                        <div class="d-flex justify-content-between align-items-center mb-2">
+                                            <small class="text-muted">
+                                                {% if stand.average_rating %}
+                                                    {% for i in range(1, 6) %}
+                                                        {% if i <= stand.average_rating %}
+                                                            <i class="bi bi-star-fill text-warning"></i>
+                                                        {% else %}
+                                                            <i class="bi bi-star text-muted"></i>
+                                                        {% endif %}
+                                                    {% endfor %}
+                                                    <span class="ms-1">({{ stand.average_rating|round(1) }})</span>
+                                                {% else %}
+                                                    Sin calificar
+                                                {% endif %}
+                                            </small>
+                                        </div>
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <small class="text-muted">
+                                                <i class="bi bi-clock"></i> {{ stand.created_at.strftime('%d/%m/%Y') }}
+                                            </small>
+                                            <a href="{{ url_for('food_stands.view_stand', id=stand.id) }}" 
+                                               class="btn btn-sm btn-outline-primary">Ver</a>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+
+                        <!-- Vista de lista -->
+                        <div class="d-none" id="listView">
+                            <div class="list-group">
+                                {% for stand in recent_stands %}
+                                <div class="list-group-item list-group-item-action border-0 mb-2 shadow-sm">
+                                    <div class="row align-items-center">
+                                        <div class="col-md-2">
+                                            {% if stand.image_filename %}
+                                            <img src="{{ url_for('static', filename='uploads/' + stand.image_filename) }}" 
+                                                 class="img-fluid rounded" style="height: 80px; width: 100%; object-fit: cover;">
+                                            {% else %}
+                                            <div class="bg-light rounded d-flex align-items-center justify-content-center" 
+                                                 style="height: 80px;">
+                                                <i class="bi bi-image text-muted" style="font-size: 2rem;"></i>
+                                            </div>
+                                            {% endif %}
+                                        </div>
+                                        <div class="col-md-7">
+                                            <h6 class="mb-1">{{ stand.name }}</h6>
+                                            <p class="mb-1 text-muted">{{ stand.description[:120] }}...</p>
+                                            <small class="text-muted">
+                                                {% if stand.address %}
+                                                    <i class="bi bi-geo-alt"></i> {{ stand.address }}
+                                                {% endif %}
+                                                {% if stand.municipality %}
+                                                    - {{ stand.municipality }}
+                                                {% endif %}
+                                            </small>
+                                        </div>
+                                        <div class="col-md-2 text-center">
+                                            <div class="mb-2">
+                                                {% if stand.average_rating %}
+                                                    {% for i in range(1, 6) %}
+                                                        {% if i <= stand.average_rating %}
+                                                            <i class="bi bi-star-fill text-warning"></i>
+                                                        {% else %}
+                                                            <i class="bi bi-star text-muted"></i>
+                                                        {% endif %}
+                                                    {% endfor %}
+                                                    <div class="small text-muted">{{ stand.average_rating|round(1) }}</div>
+                                                {% else %}
+                                                    <div class="small text-muted">Sin calificar</div>
+                                                {% endif %}
+                                            </div>
+                                            <small class="text-muted d-block">
+                                                <i class="bi bi-clock"></i> {{ stand.created_at.strftime('%d/%m/%Y') }}
+                                            </small>
+                                        </div>
+                                        <div class="col-md-1">
+                                            <a href="{{ url_for('food_stands.view_stand', id=stand.id) }}" 
+                                               class="btn btn-sm btn-outline-primary">
+                                                <i class="bi bi-eye"></i>
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+
+                    {% if recent_stands|length == 0 %}
+                    <div class="text-center py-4">
+                        <i class="bi bi-inbox text-muted" style="font-size: 3rem;"></i>
+                        <h6 class="text-muted mt-2">No hay puestos recientes</h6>
+                        <p class="text-muted">¡Sé el primero en agregar un puesto!</p>
+                        <a href="{{ url_for('food_stands.create_stand') }}" class="btn btn-primary">
+                            <i class="bi bi-plus-circle"></i> Crear Puesto
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Modal del mapa removido - ya no es necesario -->
+<!-- Los usuarios pueden acceder al mapa mediante el botón "Explorar" que va a index.html -->
+{% endblock %}
+
+{% block scripts %}
+<!-- JavaScript para filtros y geolocalización -->
+<script>
+console.log('🎯 DASHBOARD CON FILTROS - CARGADO');
+
+// Función para obtener ubicación del usuario
+document.getElementById('getUserLocation').addEventListener('click', function() {
+    if (navigator.geolocation) {
+        this.innerHTML = '<i class="bi bi-geo-alt"></i> Obteniendo...';
+        this.disabled = true;
+        
+        navigator.geolocation.getCurrentPosition(
+            (position) => {
+                const lat = position.coords.latitude;
+                const lng = position.coords.longitude;
+                
+                document.getElementById('lat').value = lat;
+                document.getElementById('lng').value = lng;
+                
+                this.innerHTML = '<i class="bi bi-geo-alt"></i> ¡Ubicación obtenida!';
+                this.classList.remove('btn-warning');
+                this.classList.add('btn-success');
+                
+                // Auto-enviar formulario si hay un radio seleccionado
+                const radius = document.getElementById('radius').value;
+                if (radius) {
+                    document.getElementById('filterForm').submit();
+                }
+                
+                setTimeout(() => {
+                    this.innerHTML = '<i class="bi bi-geo-alt"></i> Mi ubicación';
+                    this.classList.remove('btn-success');
+                    this.classList.add('btn-warning');
+                    this.disabled = false;
+                }, 2000);
+            },
+            (error) => {
+                console.error('Error obteniendo ubicación:', error);
+                this.innerHTML = '<i class="bi bi-geo-alt"></i> Error';
+                this.classList.remove('btn-warning');
+                this.classList.add('btn-danger');
+                
+                setTimeout(() => {
+                    this.innerHTML = '<i class="bi bi-geo-alt"></i> Mi ubicación';
+                    this.classList.remove('btn-danger');
+                    this.classList.add('btn-warning');
+                    this.disabled = false;
+                }, 2000);
+            }
+        );
+    } else {
+        alert('Tu navegador no soporta geolocalización');
+    }
+});
+
+// Auto-submit al cambiar filtros (excepto búsqueda por texto)
+document.getElementById('municipality').addEventListener('change', function() {
+    document.getElementById('filterForm').submit();
+});
+
+document.getElementById('state').addEventListener('change', function() {
+    document.getElementById('filterForm').submit();
+});
+
+// Mostrar información de filtros activos
+const currentFilters = {{ current_filters | tojson }};
+if (currentFilters.lat && currentFilters.lng && currentFilters.radius) {
+    console.log(`🎯 Búsqueda por radio: ${currentFilters.radius}km desde (${currentFilters.lat}, ${currentFilters.lng})`);
+}
+
+// Indicador de resultados
+{% if filtered_stands %}
+    console.log(`📍 Resultados filtrados: {{ filtered_stands|length }} puestos encontrados`);
+{% endif %}
+
+// ========================================
+// CONTROL DE VISTA EXPANDIBLE PARA PUESTOS RECIENTES
+// ========================================
+
+document.addEventListener('DOMContentLoaded', function() {
+    const toggleBtn = document.getElementById('toggleRecentView');
+    const compactView = document.getElementById('compactRecentView');
+    const expandedView = document.getElementById('expandedRecentView');
+    const viewModeButtons = document.getElementById('viewModeButtons');
+    const cardViewBtn = document.getElementById('cardViewBtn');
+    const listViewBtn = document.getElementById('listViewBtn');
+    const cardView = document.getElementById('cardView');
+    const listView = document.getElementById('listView');
+
+    // Control del botón de expandir/contraer
+    if (toggleBtn) {
+        toggleBtn.addEventListener('click', function() {
+            const isExpanded = this.getAttribute('data-expanded') === 'true';
+            
+            if (isExpanded) {
+                // Contraer vista
+                compactView.classList.remove('d-none');
+                expandedView.classList.add('d-none');
+                viewModeButtons.classList.add('d-none');
+                this.innerHTML = '<i class="bi bi-arrows-expand"></i> Ver todos';
+                this.setAttribute('data-expanded', 'false');
+            } else {
+                // Expandir vista
+                compactView.classList.add('d-none');
+                expandedView.classList.remove('d-none');
+                viewModeButtons.classList.remove('d-none');
+                this.innerHTML = '<i class="bi bi-arrows-collapse"></i> Ver menos';
+                this.setAttribute('data-expanded', 'true');
+            }
+        });
+    }
+
+    // Control de vista de tarjetas vs lista
+    if (cardViewBtn && listViewBtn) {
+        cardViewBtn.addEventListener('click', function() {
+            cardView.classList.remove('d-none');
+            listView.classList.add('d-none');
+            cardViewBtn.classList.add('active');
+            listViewBtn.classList.remove('active');
+        });
+
+        listViewBtn.addEventListener('click', function() {
+            cardView.classList.add('d-none');
+            listView.classList.remove('d-none');
+            listViewBtn.classList.add('active');
+            cardViewBtn.classList.remove('active');
+        });
+    }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,616 @@
+{% extends "base.html" %}
+
+{% block title %}Quadra - Mapa de Puestos de Comida{% endblock %}
+
+{% block head %}
+<!-- Leaflet CSS -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<style>
+    #map {
+        height: 70vh;
+        width: 100%;
+        border-radius: 10px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+    
+    .stand-popup {
+        max-width: 300px;
+    }
+    
+    .stand-popup .popup-image {
+        width: 100%;
+        height: 120px;
+        object-fit: cover;
+        border-radius: 5px;
+        margin-bottom: 10px;
+    }
+    
+    .stand-popup .rating {
+        color: #ffc107;
+    }
+    
+    .search-container {
+        background: rgba(255, 255, 255, 0.95);
+        border-radius: 10px;
+        padding: 20px;
+        margin-bottom: 20px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    }
+    
+    .stats-container {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-radius: 10px;
+        padding: 30px;
+        margin-bottom: 20px;
+        text-align: center;
+    }
+    
+    .hero-section {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 60px 0;
+        margin-bottom: 30px;
+    }
+    
+    .cta-overlay {
+        position: absolute;
+        top: 20px;
+        right: 20px;
+        background: rgba(255, 255, 255, 0.95);
+        padding: 15px;
+        border-radius: 10px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        z-index: 1000;
+    }
+    
+    /* Animación para marcador de ubicación */
+    @keyframes pulse {
+        0% {
+            transform: scale(1);
+            opacity: 1;
+        }
+        50% {
+            transform: scale(1.2);
+            opacity: 0.7;
+        }
+        100% {
+            transform: scale(1);
+            opacity: 1;
+        }
+    }
+    
+    /* Estilos para notificaciones de ubicación */
+    .location-notification {
+        animation: slideInRight 0.3s ease-out;
+    }
+    
+    @keyframes slideInRight {
+        from {
+            transform: translateX(100%);
+            opacity: 0;
+        }
+        to {
+            transform: translateX(0);
+            opacity: 1;
+        }
+    }
+    
+    @media (max-width: 768px) {
+        .cta-overlay {
+            position: static;
+            margin-bottom: 20px;
+        }
+        
+        #map {
+            height: 50vh;
+        }
+    }
+
+    /* Asegurar contraste de botones dentro de popups de Leaflet */
+    .leaflet-popup .btn {
+        font-weight: 600;
+    }
+    .leaflet-popup .btn-primary {
+        color: #fff !important; /* texto blanco sobre fondo azul */
+        background-color: #0d6efd !important;
+        border-color: #0d6efd !important;
+    }
+    .leaflet-popup .btn-primary .bi,
+    .leaflet-popup .btn-primary i {
+        color: inherit !important; /* iconos hereden color del texto */
+    }
+    .leaflet-popup .btn-outline-secondary {
+        color: #212529 !important; /* texto oscuro para outline */
+        border-color: #6c757d !important;
+        background-color: transparent !important;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Hero Section -->
+<section class="hero-section">
+    <div class="container">
+        <div class="row">
+            <div class="col-lg-8 mx-auto text-center">
+                <h1 class="display-4 fw-bold mb-4">
+                    <i class="bi bi-geo-alt-fill"></i> Explora Puestos de Comida
+                </h1>
+                <p class="lead mb-4">
+                    Descubre los mejores puestos de comida callejera cerca de ti. 
+                    Explora el mapa, lee reseñas y encuentra tu próxima comida favorita.
+                </p>
+                {% if not current_user.is_authenticated %}
+                <div class="d-flex gap-3 justify-content-center">
+                    <a href="{{ url_for('auth.register') }}" class="btn btn-light btn-lg">
+                        <i class="bi bi-person-plus"></i> Únete para Agregar Puestos
+                    </a>
+                    <a href="{{ url_for('auth.login') }}" class="btn btn-outline-light btn-lg">
+                        <i class="bi bi-box-arrow-in-right"></i> Iniciar Sesión
+                    </a>
+                </div>
+                {% else %}
+                <div class="d-flex gap-3 justify-content-center">
+                    <a href="{{ url_for('food_stands.create_stand') }}" class="btn btn-light btn-lg">
+                        <i class="bi bi-plus-circle"></i> Agregar Nuevo Puesto
+                    </a>
+                    <a href="{{ url_for('main.dashboard') }}" class="btn btn-outline-light btn-lg">
+                        <i class="bi bi-house"></i> Ir al Dashboard
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</section>
+
+<div class="container">
+    <!-- Stats Section -->
+    {% if food_stands %}
+    <div class="stats-container">
+        <div class="row">
+            <div class="col-md-4">
+                <h3 class="fw-bold">{{ food_stands|length }}</h3>
+                <p class="mb-0">Puestos Registrados</p>
+            </div>
+            <div class="col-md-4">
+                <h3 class="fw-bold">{{ food_stands|sum(attribute='total_reviews') }}</h3>
+                <p class="mb-0">Reseñas Totales</p>
+            </div>
+            <div class="col-md-4">
+                <h3 class="fw-bold">
+                    {% set avg_rating = (food_stands|selectattr('average_rating')|map(attribute='average_rating')|sum / food_stands|selectattr('average_rating')|list|length) if food_stands|selectattr('average_rating')|list else 0 %}
+                    {{ "%.1f"|format(avg_rating) }} ⭐
+                </h3>
+                <p class="mb-0">Calificación Promedio</p>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Search and Filter Section -->
+    <div class="search-container">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <div class="input-group">
+                    <span class="input-group-text">
+                        <i class="bi bi-search"></i>
+                    </span>
+                    <input type="text" class="form-control" id="searchInput" placeholder="Buscar puestos por nombre o descripción...">
+                </div>
+            </div>
+            <div class="col-md-4">
+                <button type="button" class="btn btn-primary w-100" id="findMyLocation">
+                    <i class="bi bi-geo-alt"></i> Ubicarme
+                </button>
+            </div>
+        </div>
+        <div class="row mt-3">
+            <div class="col-md-6">
+                <label for="minRating" class="form-label">Calificación mínima:</label>
+                <select class="form-select" id="minRating">
+                    <option value="0">Todas las calificaciones</option>
+                    <option value="1">1⭐ o más</option>
+                    <option value="2">2⭐ o más</option>
+                    <option value="3">3⭐ o más</option>
+                    <option value="4">4⭐ o más</option>
+                    <option value="5">5⭐ únicamente</option>
+                </select>
+            </div>
+            <div class="col-md-6">
+                <label for="sortBy" class="form-label">Ordenar por:</label>
+                <select class="form-select" id="sortBy">
+                    <option value="newest">Más recientes</option>
+                    <option value="rating">Mejor calificados</option>
+                    <option value="reviews">Más reseñados</option>
+                </select>
+            </div>
+        </div>
+    </div>
+
+    <!-- Map Section -->
+    <div class="position-relative">
+        {% if not current_user.is_authenticated %}
+        <div class="cta-overlay">
+            <h6 class="fw-bold text-dark mb-2">¿Encontraste tu puesto favorito?</h6>
+            <p class="small text-muted mb-3">Únete para agregar reseñas y nuevos puestos</p>
+            <a href="{{ url_for('auth.register') }}" class="btn btn-primary btn-sm">
+                <i class="bi bi-person-plus"></i> Registrarse
+            </a>
+        </div>
+        {% endif %}
+        
+        <div id="map"></div>
+    </div>
+
+    <!-- Quick Actions -->
+    {% if not current_user.is_authenticated %}
+    <div class="row mt-4">
+        <div class="col-md-6">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body text-center">
+                    <i class="bi bi-person-plus text-primary mb-3" style="font-size: 3rem;"></i>
+                    <h5>¿Conoces un puesto que no está aquí?</h5>
+                    <p class="text-muted">Regístrate para agregar nuevos puestos de comida y ayudar a la comunidad.</p>
+                    <a href="{{ url_for('auth.register') }}" class="btn btn-primary">
+                        <i class="bi bi-person-plus"></i> Crear Cuenta
+                    </a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body text-center">
+                    <i class="bi bi-star text-warning mb-3" style="font-size: 3rem;"></i>
+                    <h5>¿Ya tienes cuenta?</h5>
+                    <p class="text-muted">Inicia sesión para dejar reseñas, agregar puestos y personalizar tu experiencia.</p>
+                    <a href="{{ url_for('auth.login') }}" class="btn btn-outline-primary">
+                        <i class="bi bi-box-arrow-in-right"></i> Iniciar Sesión
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<!-- Leaflet JS -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<script>
+// Configurar íconos de Leaflet para evitar errores 404
+delete L.Icon.Default.prototype._getIconUrl;
+L.Icon.Default.mergeOptions({
+    iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png',
+    iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png',
+    shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
+});
+
+// Datos de los puestos de comida
+const foodStands = {{ food_stands|tojson }};
+
+// Estado de autenticación disponible para JS (usado en el handler de click)
+const IS_AUTHENTICATED = {{ 'true' if current_user.is_authenticated else 'false' }};
+
+// Inicializar mapa
+const map = L.map('map').setView([19.4326, -99.1332], 11); // Ciudad de México por defecto
+
+// Agregar capa de mapa
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© OpenStreetMap contributors'
+}).addTo(map);
+
+// Crear grupo de marcadores
+const markersGroup = L.layerGroup().addTo(map);
+let allMarkers = [];
+let userLocationMarker = null;
+
+// Función para geolocalización automática al cargar
+function attemptAutoLocation() {
+    if (navigator.geolocation) {
+        // Configuración de geolocalización optimizada
+        const options = {
+            enableHighAccuracy: true,
+            timeout: 8000,
+            maximumAge: 300000 // 5 minutos
+        };
+        
+        navigator.geolocation.getCurrentPosition(
+            (position) => {
+                const lat = position.coords.latitude;
+                const lng = position.coords.longitude;
+                
+                // Centrar mapa en la ubicación del usuario
+                map.setView([lat, lng], 14);
+                
+                // Agregar marcador de ubicación actual
+                if (userLocationMarker) {
+                    map.removeLayer(userLocationMarker);
+                }
+                
+                userLocationMarker = L.marker([lat, lng], {
+                    icon: L.divIcon({
+                        className: 'current-location-marker',
+                        html: '<div style="background: #dc3545; width: 20px; height: 20px; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 6px rgba(0,0,0,0.3);"></div>',
+                        iconSize: [26, 26],
+                        iconAnchor: [13, 13]
+                    })
+                }).addTo(map);
+                
+                userLocationMarker.bindPopup('<strong>📍 Tu ubicación actual</strong><br><small>Detectada automáticamente</small>');
+                
+                // Mostrar notificación de éxito
+                showLocationNotification('🎯 Ubicación detectada automáticamente', 'success');
+            },
+            (error) => {
+                // Manejar errores de forma no intrusiva
+                console.log('Geolocalización automática no disponible:', error.message);
+                
+                // Mostrar notificación sutil
+                if (error.code === error.PERMISSION_DENIED) {
+                    showLocationNotification('💡 Puedes usar el botón "Ubicarme" para centrar el mapa', 'info');
+                }
+            },
+            options
+        );
+    }
+}
+
+// Función para mostrar notificaciones de ubicación
+function showLocationNotification(message, type = 'info') {
+    const notification = document.createElement('div');
+    notification.className = `alert alert-${type} alert-dismissible fade show position-fixed location-notification`;
+    notification.style.cssText = 'top: 20px; right: 20px; z-index: 1050; max-width: 320px; font-size: 0.9rem; box-shadow: 0 4px 12px rgba(0,0,0,0.15);';
+    notification.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close btn-close-sm" data-bs-dismiss="alert" aria-label="Close"></button>
+    `;
+    
+    document.body.appendChild(notification);
+    
+    // Auto-dismiss después de 5 segundos
+    setTimeout(() => {
+        if (notification.parentNode) {
+            notification.classList.remove('show');
+            setTimeout(() => notification.remove(), 150);
+        }
+    }, 5000);
+}
+
+// Ejecutar geolocalización automática después de un pequeño delay
+setTimeout(() => {
+    attemptAutoLocation();
+    
+    // Mostrar mensaje de bienvenida si es la primera visita
+    if (!localStorage.getItem('quadra_visited')) {
+        setTimeout(() => {
+            showLocationNotification('👋 ¡Bienvenido a Quadra! Permitir ubicación mejora tu experiencia', 'info');
+            localStorage.setItem('quadra_visited', 'true');
+        }, 2000);
+    }
+}, 1000);
+
+// Función para crear popup de puesto
+function createStandPopup(stand) {
+    const imageHtml = stand.image_filename ? 
+        `<img src="/static/uploads/${stand.image_filename}" class="popup-image" alt="${stand.name}">` : 
+        `<div class="popup-image bg-light d-flex align-items-center justify-content-center">
+            <i class="bi bi-image text-muted" style="font-size: 2rem;"></i>
+        </div>`;
+    
+    const rating = stand.average_rating > 0 ? 
+        `<span class="rating">${'⭐'.repeat(Math.round(stand.average_rating))}</span> (${stand.average_rating}/5)` :
+        '<span class="text-muted">Sin calificaciones</span>';
+    
+    const isAuthenticated = {{ 'true' if current_user.is_authenticated else 'false' }};
+    
+    const actionButton = isAuthenticated ? 
+        `<a href="/stands/${stand.id}" class="btn btn-primary btn-sm w-100">
+            <i class="bi bi-eye"></i> Ver Detalles
+        </a>` :
+        `<a href="/auth/login" class="btn btn-outline-primary btn-sm w-100">
+            <i class="bi bi-box-arrow-in-right"></i> Inicia sesión para ver más
+        </a>`;
+    
+    return `
+        <div class="stand-popup">
+            ${imageHtml}
+            <h6 class="fw-bold mb-2">${stand.name}</h6>
+            <p class="small mb-2">${stand.description}</p>
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <div>${rating}</div>
+                <small class="text-muted">${stand.total_reviews} reseñas</small>
+            </div>
+            <div class="d-flex justify-content-between align-items-center">
+                <small class="text-muted">Por: ${stand.owner}</small>
+                <small class="text-muted">${stand.created_at}</small>
+            </div>
+            ${stand.address ? `<p class="small text-muted mt-2"><i class="bi bi-geo-alt"></i> ${stand.address}</p>` : ''}
+            <div class="mt-2">
+                ${actionButton}
+            </div>
+        </div>
+    `;
+}
+
+// Agregar marcadores al mapa
+function addMarkersToMap(stands) {
+    markersGroup.clearLayers();
+    allMarkers = [];
+    
+    stands.forEach(stand => {
+        const marker = L.marker([stand.latitude, stand.longitude])
+            .bindPopup(createStandPopup(stand));
+        
+        marker.standData = stand;
+        allMarkers.push(marker);
+        markersGroup.addLayer(marker);
+    });
+    
+    // Ajustar vista del mapa si hay marcadores
+    if (allMarkers.length > 0) {
+        const group = new L.featureGroup(allMarkers);
+        map.fitBounds(group.getBounds().pad(0.1));
+    }
+}
+
+// Filtrar marcadores
+function filterMarkers() {
+    const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+    const minRating = parseFloat(document.getElementById('minRating').value);
+    const sortBy = document.getElementById('sortBy').value;
+    
+    let filteredStands = foodStands.filter(stand => {
+        const matchesSearch = stand.name.toLowerCase().includes(searchTerm) || 
+                            stand.description.toLowerCase().includes(searchTerm);
+        const matchesRating = stand.average_rating >= minRating;
+        
+        return matchesSearch && matchesRating;
+    });
+    
+    // Ordenar resultados
+    switch(sortBy) {
+        case 'rating':
+            filteredStands.sort((a, b) => b.average_rating - a.average_rating);
+            break;
+        case 'reviews':
+            filteredStands.sort((a, b) => b.total_reviews - a.total_reviews);
+            break;
+        case 'newest':
+        default:
+            filteredStands.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+            break;
+    }
+    
+    addMarkersToMap(filteredStands);
+}
+
+// Event listeners para filtros
+document.getElementById('searchInput').addEventListener('input', filterMarkers);
+document.getElementById('minRating').addEventListener('change', filterMarkers);
+document.getElementById('sortBy').addEventListener('change', filterMarkers);
+
+// Geolocalización manual (botón)
+document.getElementById('findMyLocation').addEventListener('click', function() {
+    if (navigator.geolocation) {
+        // Cambiar estado del botón
+        const originalText = this.innerHTML;
+        this.innerHTML = '<i class="bi bi-arrow-clockwise spinner-border spinner-border-sm"></i> Ubicando...';
+        this.disabled = true;
+        
+        const options = {
+            enableHighAccuracy: true,
+            timeout: 8000,
+            maximumAge: 60000 // 1 minuto
+        };
+        
+        navigator.geolocation.getCurrentPosition(
+            (position) => {
+                const lat = position.coords.latitude;
+                const lng = position.coords.longitude;
+                
+                // Centrar mapa en la ubicación
+                map.setView([lat, lng], 15); // Zoom más cercano para búsqueda manual
+                
+                // Remover marcador anterior si existe
+                if (userLocationMarker) {
+                    map.removeLayer(userLocationMarker);
+                }
+                
+                // Agregar nuevo marcador de ubicación actual
+                userLocationMarker = L.marker([lat, lng], {
+                    icon: L.divIcon({
+                        className: 'current-location-marker',
+                        html: '<div style="background: #dc3545; width: 20px; height: 20px; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 6px rgba(0,0,0,0.3); animation: pulse 2s infinite;"></div>',
+                        iconSize: [26, 26],
+                        iconAnchor: [13, 13]
+                    })
+                }).addTo(map);
+                
+                userLocationMarker.bindPopup('<strong>📍 Tu ubicación actual</strong><br><small>Obtenida manualmente</small>');
+                
+                // Mostrar popup automáticamente para confirmación
+                userLocationMarker.openPopup();
+                
+                // Mostrar notificación de éxito
+                showLocationNotification('🎯 ¡Ubicación actualizada correctamente!', 'success');
+                
+                // Restaurar botón
+                this.innerHTML = originalText;
+                this.disabled = false;
+            },
+            (error) => {
+                let message = 'No se pudo obtener tu ubicación';
+                
+                switch(error.code) {
+                    case error.PERMISSION_DENIED:
+                        message = 'Permiso de ubicación denegado. Por favor, permite el acceso a tu ubicación.';
+                        break;
+                    case error.POSITION_UNAVAILABLE:
+                        message = 'Información de ubicación no disponible.';
+                        break;
+                    case error.TIMEOUT:
+                        message = 'Tiempo de espera agotado. Inténtalo de nuevo.';
+                        break;
+                }
+                
+                showLocationNotification(message, 'warning');
+                
+                // Restaurar botón
+                this.innerHTML = originalText;
+                this.disabled = false;
+            },
+            options
+        );
+    } else {
+        showLocationNotification('Tu navegador no soporta geolocalización', 'error');
+    }
+});
+
+// Inicializar mapa con todos los puestos
+addMarkersToMap(foodStands);
+
+// Manejo de clic en el mapa para agregar un nuevo puesto
+map.on('click', function(e) {
+    const lat = e.latlng.lat;
+    const lng = e.latlng.lng;
+
+    // Construir URL destino para crear puesto con coordenadas como query params
+    const createUrl = `/stands/create?lat=${encodeURIComponent(lat)}&lng=${encodeURIComponent(lng)}`;
+
+    let popupContent = '';
+    if (IS_AUTHENTICATED) {
+        popupContent = `
+            <div style="min-width:180px;">
+                <p class="mb-2 small">¿Agregar un nuevo puesto en esta ubicación?</p>
+                <a class="btn btn-primary btn-sm w-100" href="${createUrl}">
+                    <i class="bi bi-plus-circle"></i> Agregar Puesto
+                </a>
+            </div>
+        `;
+    } else {
+        // Si no está autenticado, llevar al login con next que apunte a la creación (se abrirá en nueva pestaña)
+        const loginNext = `/auth/login?next=${encodeURIComponent(createUrl)}`;
+        popupContent = `
+            <div style="min-width:180px;">
+                <p class="mb-2 small">Debes iniciar sesión para agregar un puesto.</p>
+                <a class="btn btn-primary btn-sm w-100 mb-2" href="${loginNext}">
+                    <i class="bi bi-box-arrow-in-right"></i> Iniciar Sesión
+                </a>
+                <a class="btn btn-outline-secondary btn-sm w-100" href="/auth/register">
+                    <i class="bi bi-person-plus"></i> Registrarme
+                </a>
+            </div>
+        `;
+    }
+
+    L.popup({ maxWidth: 260 })
+        .setLatLng(e.latlng)
+        .setContent(popupContent)
+        .openOn(map);
+});
+</script>
+{% endblock %}

@@ -7,9 +7,16 @@ from flask_login import LoginManager
 from flask_cors import CORS
 from dotenv import load_dotenv
 import os
+from typing import cast
 
-# Cargar variables de entorno
-load_dotenv()
+# Cargar variables de entorno desde app/.env si existe (más robusto que load_dotenv() a ciegas)
+basedir = os.path.abspath(os.path.dirname(__file__))
+env_path = os.path.join(basedir, '.env')
+if os.path.exists(env_path):
+    load_dotenv(env_path)
+else:
+    # fallback: intentar cargar .env en el cwd u otros lugares
+    load_dotenv()
 
 db = SQLAlchemy()
 migrate = Migrate()
@@ -58,7 +65,8 @@ def create_app():
     CORS(app)
     
     # Configurar login manager
-    login_manager.login_view = 'auth.login'
+    # Asignar usando setattr para evitar comprobaciones estáticas de tipos
+    setattr(login_manager, 'login_view', 'auth.login')
     login_manager.login_message = 'Por favor, inicia sesión para acceder a esta página.'
     login_manager.login_message_category = 'info'
     

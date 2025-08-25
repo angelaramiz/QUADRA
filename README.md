@@ -1,3 +1,7 @@
+## QUADRA
+
+Quadra es una aplicación web desarrollada con Flask para gestionar y descubrir puestos de comida (food stands). Incluye registro e inicio de sesión de usuarios, reseñas, gestión de puestos y funcionalidades de geolocalización para mostrar ubicaciones en un mapa.
+
 ## Dependencias y ejecución en localhost
 
 Esta sección explica las dependencias necesarias y los pasos mínimos para ejecutar la aplicación en tu máquina (desarrollo / local).

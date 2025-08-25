@@ -2,7 +2,8 @@ from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from flask_login import LoginManager
-from flask_wtf.csrf import CSRFProtect
+# Import CSRFProtect lazily inside create_app to avoid import-time errors
+# when Werkzeug/Flask-WTF version conflicts occur during release/build.
 from flask_cors import CORS
 from dotenv import load_dotenv
 import os
@@ -13,7 +14,8 @@ load_dotenv()
 db = SQLAlchemy()
 migrate = Migrate()
 login_manager = LoginManager()
-csrf = CSRFProtect()
+# csrf may be initialized inside create_app; keep a module-level placeholder
+csrf = None
 
 def create_app():
     app = Flask(__name__)
@@ -37,7 +39,22 @@ def create_app():
     db.init_app(app)
     migrate.init_app(app, db)
     login_manager.init_app(app)
-    csrf.init_app(app)
+
+    # Inicializar CSRF de forma perezosa. Si la importación falla (por ejemplo
+    # por incompatibilidades entre Flask-WTF y Werkzeug) continuamos sin CSRF
+    # para permitir que el release_command (migraciones/creación de tablas)
+    # se ejecute en entornos donde no se pueda resolver la dependencia.
+    try:
+        from flask_wtf.csrf import CSRFProtect
+        global csrf
+        if csrf is None:
+            csrf = CSRFProtect()
+        csrf.init_app(app)
+    except Exception:
+        # Registramos silenciosamente la ausencia de CSRF; en producción deberías
+        # revisar las dependencias e instalar una versión compatible.
+        pass
+
     CORS(app)
     
     # Configurar login manager

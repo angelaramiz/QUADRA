@@ -6,6 +6,10 @@ document.addEventListener('DOMContentLoaded', function() {
     initializeFileUpload();
     initializeGeolocation();
     initializeTooltips();
+    // Capturar promesas rechazadas sin handler para depuración
+    window.addEventListener('unhandledrejection', function(event) {
+        console.error('Unhandled promise rejection:', event.reason);
+    });
 });
 
 // Sistema de calificación con estrellas

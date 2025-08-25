@@ -39,8 +39,14 @@ def create_app():
         app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///quadra.db'
     
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-    app.config['UPLOAD_FOLDER'] = 'app/static/uploads'
+    
+    # Configurar rutas de uploads usando rutas absolutas para producción
+    upload_folder = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'static', 'uploads')
+    app.config['UPLOAD_FOLDER'] = upload_folder
     app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
+    
+    # Asegurar que el directorio de uploads existe
+    os.makedirs(upload_folder, exist_ok=True)
     
     # Inicializar extensiones
     db.init_app(app)
@@ -51,16 +57,25 @@ def create_app():
     # por incompatibilidades entre Flask-WTF y Werkzeug) continuamos sin CSRF
     # para permitir que el release_command (migraciones/creación de tablas)
     # se ejecute en entornos donde no se pueda resolver la dependencia.
+    csrf_enabled = False
     try:
-        from flask_wtf.csrf import CSRFProtect
+        from flask_wtf.csrf import CSRFProtect, generate_csrf
         global csrf
         if csrf is None:
             csrf = CSRFProtect()
         csrf.init_app(app)
+        csrf_enabled = True
+        
+        # Hacer csrf_token disponible en todas las plantillas
+        @app.context_processor
+        def inject_csrf_token_enabled():
+            return dict(csrf_token=generate_csrf)
+            
     except Exception:
-        # Registramos silenciosamente la ausencia de CSRF; en producción deberías
-        # revisar las dependencias e instalar una versión compatible.
-        pass
+        # Si CSRF falla, proveer una función dummy para las plantillas
+        @app.context_processor
+        def inject_csrf_token_disabled():
+            return dict(csrf_token=lambda: '')
 
     CORS(app)
     
@@ -85,6 +100,13 @@ def create_app():
     app.register_blueprint(main_bp)
     app.register_blueprint(auth_bp, url_prefix='/auth')
     app.register_blueprint(food_stands_bp, url_prefix='/stands')
+    
+    # Ruta para servir archivos de uploads desde el volumen persistente
+    @app.route('/static/uploads/<filename>')
+    def uploaded_file(filename):
+        """Servir archivos de uploads desde el volumen persistente"""
+        from flask import send_from_directory
+        return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
     
     # User loader para Flask-Login
     @login_manager.user_loader

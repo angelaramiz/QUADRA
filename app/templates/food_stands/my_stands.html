@@ -161,7 +161,7 @@
                 <p>Comparte este enlace para que otros vean tu puesto:</p>
                 <div class="input-group">
                     <input type="text" class="form-control" id="shareUrl" readonly>
-                    <button class="btn btn-outline-secondary" type="button" onclick="copyToClipboard()">
+                    <button class="btn btn-outline-secondary" type="button" onclick="copyToClipboard(event)">
                         <i class="bi bi-clipboard"></i> Copiar
                     </button>
                 </div>
@@ -188,46 +188,54 @@ function copyToClipboard() {
     urlInput.setSelectionRange(0, 99999); // Para móviles
     
     try {
-        document.execCommand('copy');
-        
-        // Cambiar temporalmente el texto del botón
-        const btn = event.target.closest('button');
+        // Consolidamos el comportamiento en una sola función más abajo.
+        // Esta rama ya no se usa directamente.
+    } catch (err) {
+        console.error('copyToClipboard fallback error:', err);
+    }
+}
+
+// Función consolidada para copiar al portapapeles con manejo de errores
+function copyToClipboard(e) {
+    const btn = e && e.target ? e.target.closest('button') : null;
+    const url = document.getElementById('shareUrl').value;
+
+    const showCopied = () => {
+        if (!btn) return;
         const originalHTML = btn.innerHTML;
         btn.innerHTML = '<i class="bi bi-check"></i> ¡Copiado!';
         btn.classList.remove('btn-outline-secondary');
         btn.classList.add('btn-success');
-        
+
         setTimeout(() => {
             btn.innerHTML = originalHTML;
             btn.classList.remove('btn-success');
             btn.classList.add('btn-outline-secondary');
         }, 2000);
-        
-    } catch (err) {
-        alert('No se pudo copiar el enlace');
-    }
-}
+    };
 
-// Alternativa moderna para copiar al portapapeles
-if (navigator.clipboard) {
-    function copyToClipboard() {
-        const url = document.getElementById('shareUrl').value;
-        
-        navigator.clipboard.writeText(url).then(() => {
-            const btn = event.target.closest('button');
-            const originalHTML = btn.innerHTML;
-            btn.innerHTML = '<i class="bi bi-check"></i> ¡Copiado!';
-            btn.classList.remove('btn-outline-secondary');
-            btn.classList.add('btn-success');
-            
-            setTimeout(() => {
-                btn.innerHTML = originalHTML;
-                btn.classList.remove('btn-success');
-                btn.classList.add('btn-outline-secondary');
-            }, 2000);
-        }).catch(() => {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(url)
+            .then(() => showCopied())
+            .catch(err => {
+                console.error('Error al copiar con navigator.clipboard:', err);
+                alert('No se pudo copiar el enlace');
+            });
+    } else {
+        try {
+            const urlInput = document.getElementById('shareUrl');
+            urlInput.select();
+            urlInput.setSelectionRange(0, 99999);
+            const successful = document.execCommand('copy');
+            if (successful) {
+                showCopied();
+            } else {
+                throw new Error('document.execCommand returned false');
+            }
+        } catch (err) {
+            console.error('Fallback copy failed:', err);
             alert('No se pudo copiar el enlace');
-        });
+        }
     }
 }
 </script>

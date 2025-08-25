@@ -126,7 +126,7 @@ def nearby_stands():
         return jsonify({'error': 'Coordenadas requeridas'}), 400
     
     # Usar el nuevo método de búsqueda por radio
-    stands = FoodStand.find_within_radius(lat, lng, radius)
+    stands = FoodStand.find_within_radius(lat, lng, int(radius))
     
     stands_data = []
     for stand in stands:
